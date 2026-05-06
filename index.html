@@ -63,7 +63,7 @@
     .is-idle:hover .photo-img {
       transform: scale(1.05);
     }
-    .is-idle:hover .photo-overlay {
+    .is-idle .photo-overlay {
       opacity: 1;
     }
     .is-idle {
@@ -214,7 +214,7 @@
 
     <!-- Photo Container -->
     <div 
-      class="relative z-20 w-full flex justify-center transition-transform duration-200 ease-out -mt-[8vw] sm:-mt-[4rem]" 
+      class="relative z-20 w-full flex justify-center transition-transform duration-200 ease-out -mt-[3vw] sm:-mt-[1.5rem]" 
       style="transform: translateY(calc(var(--mouse-y) * 8px + var(--scroll-y) * 0.05px));">
       
       <div id="photoContainer" class="is-idle relative w-full max-w-[280px] sm:max-w-[320px] aspect-[3/4] bg-white p-2 shadow-[0_20px_50px_rgba(0,0,0,0.4)] transition-all duration-300">
@@ -226,7 +226,7 @@
                class="photo-img w-full h-full object-cover transition-all duration-700 sepia-[0.35] brightness-[1.15] contrast-95 saturate-[0.7]">
           
           <!-- Idle Overlay Guide -->
-          <div id="idleOverlay" class="photo-overlay absolute inset-0 bg-black/10 flex flex-col items-center justify-center opacity-0 transition-opacity duration-300">
+          <div id="idleOverlay" class="photo-overlay absolute inset-0 bg-black/10 flex flex-col items-center justify-center transition-opacity duration-300">
             <span class="bg-[#F1ECE2] text-[#2f4110] px-5 py-2 rounded-sm font-bold shadow-lg text-sm tracking-wider uppercase">Tap to Capture</span>
           </div>
 
@@ -248,9 +248,9 @@
 
   <main class="relative z-20 w-full max-w-4xl flex-1 flex flex-col items-center px-4 pb-16">
     <!-- Hidden Camera Input -->
-    <input type="file" accept="image/*" capture="environment" id="cameraInput1" class="hidden" />
-    <input type="file" accept="image/*" capture="environment" id="cameraInput2" class="hidden" />
-    <input type="file" accept="image/*" capture="environment" id="cameraInput3" class="hidden" />
+    <!-- Camera: capture=environment forces direct camera on Android -->
+    <input type="file" accept="image/*" capture="environment" id="cameraInput" class="hidden" />
+    <!-- Gallery: NO capture attr forces direct gallery/file picker -->
     <input type="file" accept="image/*" id="galleryInput" class="hidden" multiple />
 
     <!-- Results / Editorial Box -->
@@ -345,9 +345,7 @@
     const rootStyle = document.documentElement.style;
     const photoContainer = document.getElementById('photoContainer');
     const photoPreview = document.getElementById('photoPreview');
-    const cameraInput1 = document.getElementById('cameraInput1');
-    const cameraInput2 = document.getElementById('cameraInput2');
-    const cameraInput3 = document.getElementById('cameraInput3');
+    const cameraInput = document.getElementById('cameraInput');
     const galleryInput = document.getElementById('galleryInput');
     const pickerModal = document.getElementById('pickerModal');
     const btnCamera = document.getElementById('btnCamera');
@@ -447,8 +445,6 @@
     });
 
     // --- Picker Modal ---
-    const cameraInputs = [cameraInput1, cameraInput2, cameraInput3];
-
     const openPicker = () => {
       if (status === 'idle' || status === 'error') {
         refreshSlots();
@@ -463,12 +459,14 @@
 
     btnCamera.addEventListener('click', () => {
       if (collectedImages.length >= 3) return;
-      const nextInput = cameraInputs[collectedImages.length];
-      nextInput.click();
+      // Force direct camera - recreate input to reset state
+      cameraInput.value = '';
+      cameraInput.click();
     });
 
     btnGallery.addEventListener('click', () => {
       if (collectedImages.length >= 3) return;
+      galleryInput.value = '';
       galleryInput.click();
     });
 
@@ -517,11 +515,9 @@
       refreshSlots();
     };
 
-    cameraInputs.forEach((input) => {
-      input.addEventListener('change', async (e) => {
-        await handleFileAdd(e.target.files[0]);
-        e.target.value = '';
-      });
+    cameraInput.addEventListener('change', async (e) => {
+      await handleFileAdd(e.target.files[0]);
+      e.target.value = '';
     });
 
     galleryInput.addEventListener('change', async (e) => {
