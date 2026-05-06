@@ -7,41 +7,54 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { imageData, mimeType } = req.body;
+    const { images } = req.body; // array of { imageData, mimeType }
+    if (!images || images.length === 0) {
+      return res.status(400).json({ error: 'Tidak ada gambar yang dikirim.' });
+    }
+
     const apiKey = "2b10STlXC1sQFsoh2vpH5KqZc";
-
-    const imageBuffer = Buffer.from(imageData, 'base64');
     const boundary = '----RambanBoundary' + Date.now();
-    const ext = mimeType.includes('png') ? 'plant.png' : 'plant.jpg';
 
-    const bodyText = `--${boundary}\r\nContent-Disposition: form-data; name="organs"\r\n\r\nauto\r\n`;
-    const headerPart = `--${boundary}\r\nContent-Disposition: form-data; name="images"; filename="${ext}"\r\nContent-Type: ${mimeType}\r\n\r\n`;
-    const footer = `\r\n--${boundary}--\r\n`;
+    // Build multipart body with all images
+    const parts = [];
 
-    const fullBody = Buffer.concat([
-      Buffer.from(bodyText + headerPart, 'utf8'),
-      imageBuffer,
-      Buffer.from(footer, 'utf8')
-    ]);
+    // organs field
+    parts.push(Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="organs"\r\n\r\nauto\r\n`,
+      'utf8'
+    ));
 
-    const response = await fetch(
-      `https://my-api.plantnet.org/v2/identify/all?api-key=${apiKey}&lang=id&include-related-images=false`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
-          'Content-Length': fullBody.length.toString(),
-        },
-        body: fullBody
-      }
-    );
+    // Each image as separate part
+    images.forEach((img, i) => {
+      const ext = img.mimeType.includes('png') ? 'png' : 'jpg';
+      const header = `--${boundary}\r\nContent-Disposition: form-data; name="images"; filename="plant${i + 1}.${ext}"\r\nContent-Type: ${img.mimeType}\r\n\r\n`;
+      parts.push(Buffer.from(header, 'utf8'));
+      parts.push(Buffer.from(img.imageData, 'base64'));
+      parts.push(Buffer.from('\r\n', 'utf8'));
+    });
+
+    parts.push(Buffer.from(`--${boundary}--\r\n`, 'utf8'));
+    const fullBody = Buffer.concat(parts);
+
+    const url = `https://my-api.plantnet.org/v2/identify/all?api-key=${apiKey}&lang=id&include-related-images=false&nb-results=5`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        'Content-Length': fullBody.length.toString(),
+      },
+      body: fullBody
+    });
 
     const data = await response.json();
-    if (!response.ok) return res.status(response.status).json({ error: data.message || `Error ${response.status}` });
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.message || `PlantNet error ${response.status}` });
+    }
 
     const top = data.results?.slice(0, 3) || [];
     if (top.length === 0) {
-      return res.status(200).json({ text: "Tanaman tidak dapat diidentifikasi. Coba foto lebih jelas." });
+      return res.status(200).json({ text: "Tanaman tidak dapat diidentifikasi. Coba foto bagian daun atau bunga dengan lebih jelas." });
     }
 
     const best = top[0];
@@ -50,20 +63,21 @@ module.exports = async function handler(req, res) {
     const commonNames = sp.commonNames?.length > 0 ? sp.commonNames.join(', ') : 'Tidak tersedia';
 
     let text = `**Nama Umum**: ${commonNames}\n`;
-    text += `**Nama Ilmiah**: ${sp.scientificName || sp.scientificNameWithoutAuthor}\n`;
+    text += `**Nama Ilmiah**: *${sp.scientificName || sp.scientificNameWithoutAuthor}*\n`;
     text += `**Genus**: ${sp.genus?.scientificNameWithoutAuthor || '-'}\n`;
     text += `**Famili**: ${sp.family?.scientificNameWithoutAuthor || '-'}\n`;
-    text += `**Tingkat Keyakinan**: ${confidence}%\n\n`;
+    text += `**Tingkat Keyakinan**: ${confidence}% (dari ${images.length} foto)\n\n`;
 
     if (top.length > 1) {
       text += `**Kemungkinan Lainnya**:\n`;
       top.slice(1).forEach((r, i) => {
         const pct = Math.round(r.score * 100);
         const cn = r.species.commonNames?.[0] || r.species.scientificNameWithoutAuthor;
-        text += `${i + 2}. ${cn} (${r.species.scientificNameWithoutAuthor}) — ${pct}%\n`;
+        text += `${i + 2}. ${cn} — *${r.species.scientificNameWithoutAuthor}* (${pct}%)\n`;
       });
       text += '\n';
     }
+
     text += `**Sisa Kuota Hari Ini**: ${data.remainingIdentificationRequests ?? '-'} request`;
 
     return res.status(200).json({ text });

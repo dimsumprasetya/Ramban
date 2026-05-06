@@ -73,6 +73,109 @@
       transform: translateY(-8px);
       box-shadow: 0 25px 60px rgba(0,0,0,0.5);
     }
+
+    /* ── Responsive fixes ── */
+
+    /* Fluid title: clamp antara 72px (kecil) dan 180px (besar) */
+    .ramban-title {
+      font-size: clamp(72px, 22vw, 180px) !important;
+    }
+
+    /* Photo card: fluid antara layar kecil dan besar */
+    #photoContainer {
+      max-width: min(75vw, 320px) !important;
+    }
+
+    /* Results box: full-width di HP kecil */
+    #resultsBox {
+      padding: clamp(1rem, 5vw, 2rem) !important;
+    }
+
+    /* Reset button tidak keluar area */
+    #resetBtn {
+      position: static !important;
+      margin-bottom: 1rem;
+      display: block;
+      margin-left: auto;
+    }
+
+    /* Modal: max height dengan scroll bila konten panjang */
+    #pickerModal > div {
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    /* Slot thumbnail: fluid agar muat 3 kolom di modal sempit */
+    .slot-box {
+      width: clamp(64px, 20vw, 88px) !important;
+      height: clamp(64px, 20vw, 88px) !important;
+    }
+
+    /* Touch target minimum 44px untuk semua tombol */
+    button {
+      min-height: 44px;
+    }
+    #btnCancel {
+      min-height: 40px;
+    }
+
+    /* Footer teks minimum 10px */
+    footer p {
+      font-size: max(10px, 0.625rem) !important;
+    }
+
+    /* Safe area untuk notch/punch-hole */
+    body {
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    #pickerModal {
+      padding-left: max(1rem, env(safe-area-inset-left));
+      padding-right: max(1rem, env(safe-area-inset-right));
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    /* Tablet (768px+): beri padding lebih */
+    @media (min-width: 768px) {
+      .ramban-title {
+        font-size: clamp(140px, 15vw, 200px) !important;
+      }
+      #photoContainer {
+        max-width: 340px !important;
+      }
+      #resultsBox {
+        padding: 2.5rem !important;
+      }
+      #pickerModal > div {
+        max-width: 420px;
+      }
+    }
+
+    /* Desktop (1024px+): cap agar tidak terlalu lebar */
+    @media (min-width: 1024px) {
+      .ramban-title {
+        font-size: 190px !important;
+      }
+      #photoContainer {
+        max-width: 360px !important;
+      }
+    }
+
+    /* HP sangat kecil (320px): turunkan spacing */
+    @media (max-width: 360px) {
+      .ramban-title {
+        font-size: 72px !important;
+      }
+      #photoContainer {
+        max-width: 220px !important;
+      }
+      #resultsBox {
+        padding: 1rem !important;
+      }
+      .slot-box {
+        width: 60px !important;
+        height: 60px !important;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen relative flex flex-col items-center select-none">
@@ -104,7 +207,7 @@
     
     <!-- Giant Typography -->
     <h1 
-      class="text-[25vw] sm:text-[13rem] font-bold text-[#2f4110] tracking-tighter leading-[0.7] pointer-events-none transition-transform duration-300 ease-out relative z-30" 
+      class="ramban-title font-bold text-[#2f4110] tracking-tighter leading-[0.7] pointer-events-none transition-transform duration-300 ease-out relative z-30" 
       style="font-family: 'Georgia', 'Times New Roman', serif; transform: scaleY(1.1) translateY(calc(var(--mouse-y) * -6px + var(--scroll-y) * 0.2px));">
       Ramban
     </h1>
@@ -145,14 +248,16 @@
 
   <main class="relative z-20 w-full max-w-4xl flex-1 flex flex-col items-center px-4 pb-16">
     <!-- Hidden Camera Input -->
-    <input type="file" accept="image/*" capture="environment" id="cameraInput" class="hidden" />
-    <input type="file" accept="image/*" id="galleryInput" class="hidden" />
+    <input type="file" accept="image/*" capture="environment" id="cameraInput1" class="hidden" />
+    <input type="file" accept="image/*" capture="environment" id="cameraInput2" class="hidden" />
+    <input type="file" accept="image/*" capture="environment" id="cameraInput3" class="hidden" />
+    <input type="file" accept="image/*" id="galleryInput" class="hidden" multiple />
 
     <!-- Results / Editorial Box -->
-    <div id="resultsBox" class="hidden mt-10 w-full max-w-md bg-[#F1ECE2] p-8 shadow-2xl text-[#2b2b2b] text-sm leading-relaxed border-t-8 border-[#2f4110] animate-fade-in relative transition-transform duration-300 ease-out" 
+    <div id="resultsBox" class="hidden mt-10 w-full max-w-md bg-[#F1ECE2] shadow-2xl text-[#2b2b2b] text-sm leading-relaxed border-t-8 border-[#2f4110] animate-fade-in transition-transform duration-300 ease-out" 
          style="transform: translateY(calc(var(--mouse-y) * 4px));">
       
-      <button id="resetBtn" class="absolute -top-12 right-0 bg-[#2f4110] text-[#F1ECE2] px-4 py-2 font-bold text-xs uppercase tracking-wider hover:bg-[#1a2509] transition-colors">
+      <button id="resetBtn" class="bg-[#2f4110] text-[#F1ECE2] px-4 py-2 font-bold text-xs uppercase tracking-wider hover:bg-[#1a2509] transition-colors mb-4">
         Cari Lainnya
       </button>
       
@@ -164,19 +269,45 @@
       </div>
     </div>
 
-    <!-- Camera / Gallery Picker Modal -->
-    <div id="pickerModal" class="hidden fixed inset-0 z-50 flex items-end justify-center pb-8 px-4" style="background: rgba(0,0,0,0.5)">
-      <div class="w-full max-w-sm bg-[#F1ECE2] shadow-2xl overflow-hidden" style="border-radius: 4px;">
+    <!-- Camera / Gallery Picker Modal (centered) -->
+    <div id="pickerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-4" style="background: rgba(0,0,0,0.6)">
+      <div class="w-full max-w-sm bg-[#F1ECE2] shadow-2xl overflow-hidden" style="border-radius: 6px;">
         <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#2f4110]/60 pt-5 pb-3 px-6 border-b border-[#D6D1C6]">Pilih Sumber Gambar</p>
-        <button id="btnCamera" class="w-full py-4 text-sm font-semibold text-[#2f4110] hover:bg-[#E5E0D6] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]">
+
+        <!-- Preview 3 Slot Foto -->
+        <div class="px-4 py-4 border-b border-[#D6D1C6]">
+          <p class="text-[10px] uppercase tracking-widest text-[#2f4110]/50 text-center mb-3 font-bold">Foto Tanaman (maks. 3)</p>
+          <div style="display:flex; gap: clamp(6px, 2vw, 10px); justify-content:center;">
+            <div id="slot1" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden" style="border-radius:4px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <img id="thumb1" class="hidden absolute inset-0 w-full h-full object-cover" />
+              <button id="del1" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center font-bold" style="border-radius:0 4px 0 4px">✕</button>
+            </div>
+            <div id="slot2" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden" style="border-radius:4px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <img id="thumb2" class="hidden absolute inset-0 w-full h-full object-cover" />
+              <button id="del2" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center font-bold" style="border-radius:0 4px 0 4px">✕</button>
+            </div>
+            <div id="slot3" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden" style="border-radius:4px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <img id="thumb3" class="hidden absolute inset-0 w-full h-full object-cover" />
+              <button id="del3" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center font-bold" style="border-radius:0 4px 0 4px">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <button id="btnCamera" class="w-full py-4 text-sm font-semibold text-[#2f4110] active:bg-[#E5E0D6] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]" style="-webkit-tap-highlight-color: rgba(0,0,0,0.1)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          Buka Kamera
+          Tambah via Kamera
         </button>
-        <button id="btnGallery" class="w-full py-4 text-sm font-semibold text-[#2f4110] hover:bg-[#E5E0D6] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]">
+        <button id="btnGallery" class="w-full py-4 text-sm font-semibold text-[#2f4110] active:bg-[#E5E0D6] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]" style="-webkit-tap-highlight-color: rgba(0,0,0,0.1)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          Pilih dari Galeri
+          Tambah dari Galeri
         </button>
-        <button id="btnCancel" class="w-full py-3 text-xs text-[#2f4110]/50 hover:bg-[#E5E0D6] transition-colors">Batal</button>
+        <button id="btnIdentify" class="hidden w-full py-4 text-sm font-bold text-[#F1ECE2] bg-[#2f4110] active:bg-[#1a2509] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]" style="-webkit-tap-highlight-color: rgba(0,0,0,0.1)">
+          Identifikasi Sekarang
+        </button>
+        <button id="btnCancel" class="w-full py-3 text-xs text-[#2f4110]/50 active:bg-[#E5E0D6] transition-colors" style="-webkit-tap-highlight-color: rgba(0,0,0,0.1)">Batal</button>
       </div>
     </div>
   </main>
@@ -195,17 +326,11 @@
     </div>
   </div>
 
-  <!-- Floating Action Button -->
-  <button id="fabBtn" class="fixed bottom-8 right-8 bg-[#F1ECE2]/90 text-[#2b2b2b] hover:bg-white hover:scale-105 backdrop-blur-md px-6 py-3 rounded-[2rem] font-semibold shadow-[0_10px_25px_rgba(0,0,0,0.15)] flex items-center gap-3 transition-all z-50 border border-[#D6D1C6]">
-    <span>Search image</span>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 12h14M12 5l7 7-7 7"/>
-    </svg>
-  </button>
+
 
   <!-- Footer Area with Disclaimer -->
   <footer class="relative z-20 w-full max-w-md text-center px-6 pb-8 mt-auto flex flex-col gap-3">
-    <p class="text-[#F1ECE2]/60 text-[9px] leading-relaxed font-sans border-t border-[#F1ECE2]/20 pt-4">
+    <p class="text-[#F1ECE2]/60 leading-relaxed font-sans border-t border-[#F1ECE2]/20 pt-4" style="font-size: max(10px, 0.625rem);">
       <strong>DISCLAIMER:</strong> Hasil identifikasi ini diproses menggunakan teknologi kecerdasan buatan (AI) dan mungkin tidak sepenuhnya akurat. Harap lakukan identifikasi lebih lanjut dan konsultasikan bersama ahlinya, terutama sebelum memanfaatkan tanaman untuk keperluan konsumsi, terapi, maupun pengobatan medis.
     </p>
     <p class="text-[#F1ECE2]/80 text-[10px] tracking-widest uppercase mt-2">
@@ -220,21 +345,24 @@
     const rootStyle = document.documentElement.style;
     const photoContainer = document.getElementById('photoContainer');
     const photoPreview = document.getElementById('photoPreview');
-    const cameraInput = document.getElementById('cameraInput');
+    const cameraInput1 = document.getElementById('cameraInput1');
+    const cameraInput2 = document.getElementById('cameraInput2');
+    const cameraInput3 = document.getElementById('cameraInput3');
     const galleryInput = document.getElementById('galleryInput');
     const pickerModal = document.getElementById('pickerModal');
     const btnCamera = document.getElementById('btnCamera');
     const btnGallery = document.getElementById('btnGallery');
     const btnCancel = document.getElementById('btnCancel');
+    const btnIdentify = document.getElementById('btnIdentify');
     const idleOverlay = document.getElementById('idleOverlay');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const resultsBox = document.getElementById('resultsBox');
     const resultsContent = document.getElementById('resultsContent');
     const resetBtn = document.getElementById('resetBtn');
-    const fabBtn = document.getElementById('fabBtn');
 
     // --- State ---
     let status = 'idle';
+    let collectedImages = []; // max 3 base64 images
 
     // --- Parallax ---
     window.addEventListener('mousemove', (e) => {
@@ -255,13 +383,13 @@
       resultsBox.classList.add('hidden');
       idleOverlay.style.display = 'none';
       photoContainer.classList.remove('is-idle');
-      fabBtn.style.display = 'none';
 
       if (status === 'idle') {
         photoContainer.classList.add('is-idle');
         idleOverlay.style.display = 'flex';
-        fabBtn.style.display = 'flex';
-        photoPreview.src = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800&auto=format&fit=crop";
+        if (collectedImages.length === 0) {
+          photoPreview.src = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800&auto=format&fit=crop";
+        }
       } else if (status === 'loading') {
         loadingOverlay.classList.remove('hidden');
         loadingOverlay.classList.add('flex');
@@ -270,31 +398,89 @@
       }
     }
 
+    // --- Thumbnail Slots ---
+    const thumbEls = [
+      document.getElementById('thumb1'),
+      document.getElementById('thumb2'),
+      document.getElementById('thumb3'),
+    ];
+    const delBtns = [
+      document.getElementById('del1'),
+      document.getElementById('del2'),
+      document.getElementById('del3'),
+    ];
+
+    function refreshSlots() {
+      for (let i = 0; i < 3; i++) {
+        if (collectedImages[i]) {
+          thumbEls[i].src = collectedImages[i];
+          thumbEls[i].classList.remove('hidden');
+          delBtns[i].classList.remove('hidden');
+        } else {
+          thumbEls[i].src = '';
+          thumbEls[i].classList.add('hidden');
+          delBtns[i].classList.add('hidden');
+        }
+      }
+      // Show identify button if at least 1 image
+      if (collectedImages.length > 0) {
+        btnIdentify.classList.remove('hidden');
+        // Update preview with last added image
+        photoPreview.src = collectedImages[collectedImages.length - 1];
+      } else {
+        btnIdentify.classList.add('hidden');
+      }
+      // Disable camera/gallery if 3 images collected
+      const full = collectedImages.length >= 3;
+      btnCamera.disabled = full;
+      btnGallery.disabled = full;
+      btnCamera.style.opacity = full ? '0.4' : '1';
+      btnGallery.style.opacity = full ? '0.4' : '1';
+    }
+
+    delBtns.forEach((btn, i) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        collectedImages.splice(i, 1);
+        refreshSlots();
+      });
+    });
+
     // --- Picker Modal ---
+    const cameraInputs = [cameraInput1, cameraInput2, cameraInput3];
+
     const openPicker = () => {
       if (status === 'idle' || status === 'error') {
+        refreshSlots();
         pickerModal.classList.remove('hidden');
       }
     };
     const closePicker = () => pickerModal.classList.add('hidden');
 
     photoContainer.addEventListener('click', openPicker);
-    fabBtn.addEventListener('click', openPicker);
     btnCancel.addEventListener('click', closePicker);
     pickerModal.addEventListener('click', (e) => { if (e.target === pickerModal) closePicker(); });
 
     btnCamera.addEventListener('click', () => {
-      closePicker();
-      cameraInput.click();
+      if (collectedImages.length >= 3) return;
+      const nextInput = cameraInputs[collectedImages.length];
+      nextInput.click();
     });
 
     btnGallery.addEventListener('click', () => {
-      closePicker();
+      if (collectedImages.length >= 3) return;
       galleryInput.click();
+    });
+
+    btnIdentify.addEventListener('click', () => {
+      closePicker();
+      identifyPlant();
     });
 
     resetBtn.addEventListener('click', () => {
       status = 'idle';
+      collectedImages = [];
+      refreshSlots();
       updateUI();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
@@ -323,47 +509,51 @@
       });
     };
 
-    // --- Handle File Input ---
-    const handleFileChange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      e.target.value = '';
-
-      // Preview gambar asli dulu
-      const rawReader = new FileReader();
-      rawReader.onloadend = () => { photoPreview.src = rawReader.result; };
-      rawReader.readAsDataURL(file);
-
-      // Kompres lalu kirim ke API
+    // --- Handle File Inputs ---
+    const handleFileAdd = async (file) => {
+      if (!file || collectedImages.length >= 3) return;
       const compressed = await compressImage(file);
-      identifyPlant(compressed);
+      collectedImages.push(compressed);
+      refreshSlots();
     };
 
-    cameraInput.addEventListener('change', handleFileChange);
-    galleryInput.addEventListener('change', handleFileChange);
+    cameraInputs.forEach((input) => {
+      input.addEventListener('change', async (e) => {
+        await handleFileAdd(e.target.files[0]);
+        e.target.value = '';
+      });
+    });
 
-    // --- Identify Plant via Vercel API function ---
-    const identifyPlant = async (base64Image) => {
+    galleryInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files).slice(0, 3 - collectedImages.length);
+      for (const file of files) await handleFileAdd(file);
+      e.target.value = '';
+    });
+
+    // --- Identify Plant via Vercel API ---
+    const identifyPlant = async () => {
+      if (collectedImages.length === 0) return;
       status = 'loading';
       updateUI();
 
       try {
-        const base64Data = base64Image.split(',')[1];
-        const mimeType = base64Image.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0];
+        // Send all images to API
+        const images = collectedImages.map(b64 => ({
+          imageData: b64.split(',')[1],
+          mimeType: b64.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0]
+        }));
 
         const response = await fetch('/api/identify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageData: base64Data, mimeType })
+          body: JSON.stringify({ images })
         });
 
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+        if (!result.text) throw new Error("Tidak ada respon dari API.");
 
-        const textResponse = result.text;
-        if (!textResponse) throw new Error("Tidak ada respon dari API.");
-
-        renderFormattedText(textResponse);
+        renderFormattedText(result.text);
         status = 'success';
         updateUI();
         setTimeout(() => {
