@@ -248,10 +248,24 @@
 
   <main class="relative z-20 w-full max-w-4xl flex-1 flex flex-col items-center px-4 pb-16">
     <!-- Hidden Camera Input -->
-    <!-- Camera: capture=environment forces direct camera on Android -->
-    <input type="file" accept="image/*" capture="environment" id="cameraInput" class="hidden" />
-    <!-- Gallery: NO capture attr forces direct gallery/file picker -->
-    <input type="file" accept="image/*" id="galleryInput" class="hidden" multiple />
+    <!-- Gallery only - no capture attr -->
+    <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" id="galleryInput" class="hidden" multiple />
+
+    <!-- In-page Camera Modal (getUserMedia) -->
+    <div id="cameraModal" class="hidden fixed inset-0 z-[60] bg-black flex flex-col">
+      <div class="flex items-center justify-between px-4 py-3">
+        <button id="btnCloseCamera" class="text-white text-sm font-bold uppercase tracking-wider px-3 py-2">✕ Batal</button>
+        <span class="text-white text-xs font-bold uppercase tracking-widest opacity-60">Kamera</span>
+        <div style="width:72px"></div>
+      </div>
+      <video id="cameraStream" autoplay playsinline class="w-full flex-1 object-cover"></video>
+      <div class="flex justify-center items-center py-8">
+        <button id="btnCapture" class="w-20 h-20 rounded-full bg-white border-4 border-[#F1ECE2] active:scale-95 transition-transform flex items-center justify-center">
+          <div class="w-14 h-14 rounded-full bg-white border-2 border-[#2f4110]"></div>
+        </button>
+      </div>
+      <canvas id="captureCanvas" class="hidden"></canvas>
+    </div>
 
     <!-- Results / Editorial Box -->
     <div id="resultsBox" class="hidden mt-10 w-full max-w-md bg-[#F1ECE2] shadow-2xl text-[#2b2b2b] text-sm leading-relaxed border-t-8 border-[#2f4110] animate-fade-in transition-transform duration-300 ease-out" 
@@ -345,8 +359,12 @@
     const rootStyle = document.documentElement.style;
     const photoContainer = document.getElementById('photoContainer');
     const photoPreview = document.getElementById('photoPreview');
-    const cameraInput = document.getElementById('cameraInput');
     const galleryInput = document.getElementById('galleryInput');
+    const cameraModal = document.getElementById('cameraModal');
+    const cameraStream = document.getElementById('cameraStream');
+    const captureCanvas = document.getElementById('captureCanvas');
+    const btnCapture = document.getElementById('btnCapture');
+    const btnCloseCamera = document.getElementById('btnCloseCamera');
     const pickerModal = document.getElementById('pickerModal');
     const btnCamera = document.getElementById('btnCamera');
     const btnGallery = document.getElementById('btnGallery');
@@ -360,7 +378,8 @@
 
     // --- State ---
     let status = 'idle';
-    let collectedImages = []; // max 3 base64 images
+    let collectedImages = [];
+    let activeStream = null;
 
     // --- Parallax ---
     window.addEventListener('mousemove', (e) => {
@@ -420,15 +439,12 @@
           delBtns[i].classList.add('hidden');
         }
       }
-      // Show identify button if at least 1 image
       if (collectedImages.length > 0) {
         btnIdentify.classList.remove('hidden');
-        // Update preview with last added image
         photoPreview.src = collectedImages[collectedImages.length - 1];
       } else {
         btnIdentify.classList.add('hidden');
       }
-      // Disable camera/gallery if 3 images collected
       const full = collectedImages.length >= 3;
       btnCamera.disabled = full;
       btnGallery.disabled = full;
@@ -457,22 +473,74 @@
     btnCancel.addEventListener('click', closePicker);
     pickerModal.addEventListener('click', (e) => { if (e.target === pickerModal) closePicker(); });
 
-    btnCamera.addEventListener('click', () => {
+    // --- Camera via getUserMedia (bypass Android chooser) ---
+    btnCamera.addEventListener('click', async () => {
       if (collectedImages.length >= 3) return;
-      // Force direct camera - recreate input to reset state
-      cameraInput.value = '';
-      cameraInput.click();
+      closePicker();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+          audio: false
+        });
+        activeStream = stream;
+        cameraStream.srcObject = stream;
+        cameraModal.classList.remove('hidden');
+      } catch (err) {
+        // Fallback: if getUserMedia fails, create temp file input with capture
+        const tmp = document.createElement('input');
+        tmp.type = 'file';
+        tmp.accept = 'image/*';
+        tmp.setAttribute('capture', 'environment');
+        tmp.style.display = 'none';
+        document.body.appendChild(tmp);
+        tmp.addEventListener('change', async (e) => {
+          await handleFileAdd(e.target.files[0]);
+          document.body.removeChild(tmp);
+          openPicker();
+        });
+        tmp.click();
+      }
     });
 
+    // --- Capture photo from stream ---
+    btnCapture.addEventListener('click', () => {
+      const video = cameraStream;
+      captureCanvas.width = video.videoWidth;
+      captureCanvas.height = video.videoHeight;
+      captureCanvas.getContext('2d').drawImage(video, 0, 0);
+      const dataUrl = captureCanvas.toDataURL('image/jpeg', 0.8);
+      stopCamera();
+      collectedImages.push(dataUrl);
+      refreshSlots();
+      // Reopen picker to allow more photos or identify
+      setTimeout(() => openPicker(), 300);
+    });
+
+    const stopCamera = () => {
+      if (activeStream) {
+        activeStream.getTracks().forEach(t => t.stop());
+        activeStream = null;
+      }
+      cameraStream.srcObject = null;
+      cameraModal.classList.add('hidden');
+    };
+
+    btnCloseCamera.addEventListener('click', () => {
+      stopCamera();
+      openPicker();
+    });
+
+    // --- Gallery via file input (direct gallery) ---
     btnGallery.addEventListener('click', () => {
       if (collectedImages.length >= 3) return;
-      galleryInput.value = '';
       galleryInput.click();
     });
 
-    btnIdentify.addEventListener('click', () => {
-      closePicker();
-      identifyPlant();
+    galleryInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files).slice(0, 3 - collectedImages.length);
+      for (const file of files) await handleFileAdd(file);
+      e.target.value = '';
+      refreshSlots();
     });
 
     resetBtn.addEventListener('click', () => {
@@ -481,6 +549,11 @@
       refreshSlots();
       updateUI();
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    btnIdentify.addEventListener('click', () => {
+      closePicker();
+      identifyPlant();
     });
 
     // --- Image Compression ---
@@ -499,7 +572,7 @@
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.6));
+            resolve(canvas.toDataURL('image/jpeg', 0.65));
           };
           img.src = reader.result;
         };
@@ -507,24 +580,11 @@
       });
     };
 
-    // --- Handle File Inputs ---
     const handleFileAdd = async (file) => {
       if (!file || collectedImages.length >= 3) return;
       const compressed = await compressImage(file);
       collectedImages.push(compressed);
-      refreshSlots();
     };
-
-    cameraInput.addEventListener('change', async (e) => {
-      await handleFileAdd(e.target.files[0]);
-      e.target.value = '';
-    });
-
-    galleryInput.addEventListener('change', async (e) => {
-      const files = Array.from(e.target.files).slice(0, 3 - collectedImages.length);
-      for (const file of files) await handleFileAdd(file);
-      e.target.value = '';
-    });
 
     // --- Identify Plant via Vercel API ---
     const identifyPlant = async () => {
@@ -533,10 +593,9 @@
       updateUI();
 
       try {
-        // Send all images to API
         const images = collectedImages.map(b64 => ({
           imageData: b64.split(',')[1],
-          mimeType: b64.match(/[^:]\w+\/[\w-+\d.]+(?=;|,)/)[0]
+          mimeType: 'image/jpeg'
         }));
 
         const response = await fetch('/api/identify', {
