@@ -1,11 +1,14 @@
 {
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" }
-      ]
-    }
+  "version": 2,
+  "builds": [
+    { "src": "api/identify.js", "use": "@vercel/node" },
+    { "src": "*.html", "use": "@vercel/static" },
+    { "src": "*.png", "use": "@vercel/static" },
+    { "src": "*.ico", "use": "@vercel/static" },
+    { "src": "*.webmanifest", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/identify", "dest": "/api/identify.js" },
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }
