@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
     }
 
     // ── KONFIGURASI API DATABYTE ──
-    const apiKey = process.env.DATABYTE_API_KEY || "MASUKKAN_API_KEY_DATABYTE_DISINI";
+    const apiKey = process.env.DATABYTE_API_KEY || "sk-db-Tkd8uDYoISi8gy9QjrDImOgM3kCNWwjjJFKUhDqoMR06IqhA";
     
     // URL Endpoint sesuai dengan panduan troubleshooting (bisa disesuaikan jika berbeda)
     const url = 'https://ai.databyte.co.id/v1/identify-plant'; 
