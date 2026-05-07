@@ -12,62 +12,80 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Tidak ada gambar yang dikirim.' });
     }
 
-    // API Key DeepSeek
-    const apiKey = "sk-1c0d9aa64a224af3bb54f56cb64c08bf";
+    // API Key Plant.id kamu
+    const apiKey = "iUUQGTPmSSPJQh6pVpXD5X6f9TwbotskFF34Jfry5FxUkSpWsw";
 
-    // Menyusun prompt instruksi untuk AI
-    const content = [
-      {
-        type: "text",
-        text: "Kamu adalah ahli botani. Identifikasi tanaman dari gambar berikut. Berikan informasi dalam bahasa Indonesia menggunakan format persis seperti ini:\n\n**Nama Umum**: [Nama umum]\n**Nama Ilmiah**: *[Nama Ilmiah]*\n**Genus**: [Genus]\n**Famili**: [Famili]\n\nJika ada beberapa gambar, itu adalah bagian dari 1 tanaman yang sama. Jika kamu tidak bisa mengidentifikasinya, jawab: 'Tanaman tidak dapat diidentifikasi. Coba foto bagian daun atau bunga dengan lebih jelas.'"
-      }
-    ];
+    // Plant.id menerima array berisi Base64 string. 
+    // Kita gabungkan mimeType dan imageData menjadi format Data URI standar.
+    const base64Images = images.map(img => `data:${img.mimeType};base64,${img.imageData}`);
 
-    // Memasukkan setiap gambar ke dalam payload JSON sebagai Base64
-    images.forEach((img) => {
-      content.push({
-        type: "image_url",
-        image_url: {
-          url: `data:${img.mimeType};base64,${img.imageData}`
-        }
-      });
-    });
-
-    // Menggunakan model DeepSeek terbaru yang mendukung vision
+    // Konfigurasi payload untuk Plant.id
     const payload = {
-      model: "deepseek-v4-flash",
-      messages: [
-        {
-          role: "user",
-          content: content
-        }
-      ],
-      max_tokens: 300,
-      temperature: 0.2 // Temperature rendah agar faktual
+      images: base64Images,
+      // Meminta API untuk mengembalikan detail tambahan seperti nama umum dan taksonomi
+      plant_details: ["common_names", "taxonomy"] 
     };
 
-    // Endpoint standar API DeepSeek untuk chat completion
-    const url = 'https://api.deepseek.com/chat/completions';
-
-    const response = await fetch(url, {
+    // Menggunakan endpoint v2 dari Plant.id
+    const response = await fetch('https://api.plant.id/v2/identify', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Api-Key': apiKey
       },
       body: JSON.stringify(payload)
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       return res.status(response.status).json({ 
-        error: data.error?.message || `DeepSeek error ${response.status}` 
+        error: data.error || `Plant.id error ${response.status}` 
       });
     }
 
-    // Mengambil teks balasan dari AI
-    let text = data.choices[0]?.message?.content || "Terjadi kesalahan saat memproses gambar.";
+    const suggestions = data.suggestions || [];
+    if (suggestions.length === 0) {
+      return res.status(200).json({ 
+        text: "Tanaman tidak dapat diidentifikasi. Coba foto bagian daun atau bunga dengan lebih jelas." 
+      });
+    }
+
+    // Mengambil hasil dengan tingkat keyakinan tertinggi (urutan pertama)
+    const best = suggestions[0];
+    const details = best.plant_details || {};
+    const confidence = Math.round(best.probability * 100);
+
+    // Mengambil nama umum (jika ada)
+    let commonNames = 'Tidak tersedia';
+    if (details.common_names && details.common_names.length > 0) {
+      commonNames = details.common_names.join(', ');
+    }
+
+    // Mengambil data taksonomi
+    const taxonomy = details.taxonomy || {};
+    const genus = taxonomy.genus || '-';
+    const family = taxonomy.family || '-';
+
+    // Menyusun teks balasan sesuai format Markdown yang diinginkan
+    let text = `**Nama Umum**: ${commonNames}\n`;
+    text += `**Nama Ilmiah**: *${best.plant_name}*\n`;
+    text += `**Genus**: ${genus}\n`;
+    text += `**Famili**: ${family}\n`;
+    text += `**Tingkat Keyakinan**: ${confidence}% (dari ${images.length} foto)\n\n`;
+
+    // Menambahkan kemungkinan tanaman lain jika ada (opsional)
+    if (suggestions.length > 1) {
+      text += `**Kemungkinan Lainnya**:\n`;
+      // Mengambil maksimal 3 kemungkinan lainnya
+      suggestions.slice(1, 4).forEach((r, i) => {
+        const pct = Math.round(r.probability * 100);
+        const cn = (r.plant_details && r.plant_details.common_names && r.plant_details.common_names.length > 0) 
+          ? r.plant_details.common_names[0] 
+          : r.plant_name;
+        text += `${i + 2}. ${cn} — *${r.plant_name}* (${pct}%)\n`;
+      });
+    }
 
     return res.status(200).json({ text });
 
