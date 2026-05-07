@@ -12,8 +12,8 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Tidak ada gambar yang dikirim.' });
     }
 
-    // API Key SiliconFlow kamu
-    const apiKey = "sk-tfxnhwyvbztzishfenmgwbbozwjjxsifbdvjhapnobncigho";
+    // API Key DeepSeek
+    const apiKey = "sk-1c0d9aa64a224af3bb54f56cb64c08bf";
 
     // Menyusun prompt instruksi untuk AI
     const content = [
@@ -33,9 +33,9 @@ module.exports = async function handler(req, res) {
       });
     });
 
-    // Menggunakan Qwen2-VL-72B-Instruct, salah satu model Vision terbaik di SiliconFlow
+    // Menggunakan model DeepSeek terbaru yang mendukung vision
     const payload = {
-      model: "Qwen/Qwen2-VL-72B-Instruct",
+      model: "deepseek-v4-flash",
       messages: [
         {
           role: "user",
@@ -43,10 +43,11 @@ module.exports = async function handler(req, res) {
         }
       ],
       max_tokens: 300,
-      temperature: 0.2 // Temperature rendah agar jawabannya faktual dan tidak bertele-tele
+      temperature: 0.2 // Temperature rendah agar faktual
     };
 
-    const url = 'https://api.siliconflow.cn/v1/chat/completions';
+    // Endpoint standar API DeepSeek untuk chat completion
+    const url = 'https://api.deepseek.com/chat/completions';
 
     const response = await fetch(url, {
       method: 'POST',
@@ -61,7 +62,7 @@ module.exports = async function handler(req, res) {
     
     if (!response.ok) {
       return res.status(response.status).json({ 
-        error: data.error?.message || `SiliconFlow error ${response.status}` 
+        error: data.error?.message || `DeepSeek error ${response.status}` 
       });
     }
 
