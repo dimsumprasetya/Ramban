@@ -12,73 +12,61 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Tidak ada gambar yang dikirim.' });
     }
 
+    // API Key SiliconFlow kamu
     const apiKey = "sk-tfxnhwyvbztzishfenmgwbbozwjjxsifbdvjhapnobncigho";
-    const boundary = '----RambanBoundary' + Date.now();
 
-    // Build multipart body with all images
-    const parts = [];
+    // Menyusun prompt instruksi untuk AI
+    const content = [
+      {
+        type: "text",
+        text: "Kamu adalah ahli botani. Identifikasi tanaman dari gambar berikut. Berikan informasi dalam bahasa Indonesia menggunakan format persis seperti ini:\n\n**Nama Umum**: [Nama umum]\n**Nama Ilmiah**: *[Nama Ilmiah]*\n**Genus**: [Genus]\n**Famili**: [Famili]\n\nJika ada beberapa gambar, itu adalah bagian dari 1 tanaman yang sama. Jika kamu tidak bisa mengidentifikasinya, jawab: 'Tanaman tidak dapat diidentifikasi. Coba foto bagian daun atau bunga dengan lebih jelas.'"
+      }
+    ];
 
-    // organs field
-    parts.push(Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="organs"\r\n\r\nauto\r\n`,
-      'utf8'
-    ));
-
-    // Each image as separate part
-    images.forEach((img, i) => {
-      const ext = img.mimeType.includes('png') ? 'png' : 'jpg';
-      const header = `--${boundary}\r\nContent-Disposition: form-data; name="images"; filename="plant${i + 1}.${ext}"\r\nContent-Type: ${img.mimeType}\r\n\r\n`;
-      parts.push(Buffer.from(header, 'utf8'));
-      parts.push(Buffer.from(img.imageData, 'base64'));
-      parts.push(Buffer.from('\r\n', 'utf8'));
+    // Memasukkan setiap gambar ke dalam payload JSON sebagai Base64
+    images.forEach((img) => {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: `data:${img.mimeType};base64,${img.imageData}`
+        }
+      });
     });
 
-    parts.push(Buffer.from(`--${boundary}--\r\n`, 'utf8'));
-    const fullBody = Buffer.concat(parts);
+    // Menggunakan Qwen2-VL-72B-Instruct, salah satu model Vision terbaik di SiliconFlow
+    const payload = {
+      model: "Qwen/Qwen2-VL-72B-Instruct",
+      messages: [
+        {
+          role: "user",
+          content: content
+        }
+      ],
+      max_tokens: 300,
+      temperature: 0.2 // Temperature rendah agar jawabannya faktual dan tidak bertele-tele
+    };
 
-    const url = `https://my-api.plantnet.org/v2/identify/all?api-key=${apiKey}&lang=id&include-related-images=false&nb-results=5`;
+    const url = 'https://api.siliconflow.cn/v1/chat/completions';
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Content-Length': fullBody.length.toString(),
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
       },
-      body: fullBody
+      body: JSON.stringify(payload)
     });
 
     const data = await response.json();
+    
     if (!response.ok) {
-      return res.status(response.status).json({ error: data.message || `PlantNet error ${response.status}` });
-    }
-
-    const top = data.results?.slice(0, 3) || [];
-    if (top.length === 0) {
-      return res.status(200).json({ text: "Tanaman tidak dapat diidentifikasi. Coba foto bagian daun atau bunga dengan lebih jelas." });
-    }
-
-    const best = top[0];
-    const sp = best.species;
-    const confidence = Math.round(best.score * 100);
-    const commonNames = sp.commonNames?.length > 0 ? sp.commonNames.join(', ') : 'Tidak tersedia';
-
-    let text = `**Nama Umum**: ${commonNames}\n`;
-    text += `**Nama Ilmiah**: *${sp.scientificName || sp.scientificNameWithoutAuthor}*\n`;
-    text += `**Genus**: ${sp.genus?.scientificNameWithoutAuthor || '-'}\n`;
-    text += `**Famili**: ${sp.family?.scientificNameWithoutAuthor || '-'}\n`;
-    text += `**Tingkat Keyakinan**: ${confidence}% (dari ${images.length} foto)\n\n`;
-
-    if (top.length > 1) {
-      text += `**Kemungkinan Lainnya**:\n`;
-      top.slice(1).forEach((r, i) => {
-        const pct = Math.round(r.score * 100);
-        const cn = r.species.commonNames?.[0] || r.species.scientificNameWithoutAuthor;
-        text += `${i + 2}. ${cn} — *${r.species.scientificNameWithoutAuthor}* (${pct}%)\n`;
+      return res.status(response.status).json({ 
+        error: data.error?.message || `SiliconFlow error ${response.status}` 
       });
-      text += '\n';
     }
 
-    text += `**Sisa Kuota Hari Ini**: ${data.remainingIdentificationRequests ?? '-'} request`;
+    // Mengambil teks balasan dari AI
+    let text = data.choices[0]?.message?.content || "Terjadi kesalahan saat memproses gambar.";
 
     return res.status(200).json({ text });
 
