@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Tidak ada gambar yang dikirim.' });
     }
 
-    const apiKey = "2b10STlXC1sQFsoh2vpH5KqZc";
+    const apiKey = "sk-tfxnhwyvbztzishfenmgwbbozwjjxsifbdvjhapnobncigho";
     const boundary = '----RambanBoundary' + Date.now();
 
     // Build multipart body with all images
