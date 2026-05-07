@@ -272,40 +272,49 @@
       <div class="w-full max-w-sm bg-[#F1ECE2] shadow-2xl overflow-hidden" style="border-radius: 6px;">
         <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#2f4110]/60 pt-5 pb-3 px-6 border-b border-[#D6D1C6]">Pilih Sumber Gambar</p>
 
-        <!-- Preview 3 Slot Foto -->
-        <div class="px-4 py-4 border-b border-[#D6D1C6]">
-          <p class="text-[10px] uppercase tracking-widest text-[#2f4110]/50 text-center mb-3 font-bold">Foto Tanaman (maks. 3)</p>
-          <div style="display:flex; gap: clamp(6px, 2vw, 10px); justify-content:center;">
-            <div id="slot1" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden" style="border-radius:4px">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              <img id="thumb1" class="hidden absolute inset-0 w-full h-full object-cover" />
-              <button id="del1" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center font-bold" style="border-radius:0 4px 0 4px">✕</button>
+        <!-- 3 Slot Foto — tap untuk buka kamera langsung -->
+        <div class="px-4 py-5 border-b border-[#D6D1C6]">
+          <p class="text-[10px] uppercase tracking-widest text-[#2f4110]/50 text-center mb-4 font-bold">Tap kotak untuk foto tanaman</p>
+          <div style="display:flex; gap:10px; justify-content:center;">
+
+            <div class="flex flex-col items-center gap-1">
+              <div id="slot1" onclick="slotTap(0)" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 transition-transform" style="border-radius:6px">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.35"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <img id="thumb1" class="hidden absolute inset-0 w-full h-full object-cover" />
+                <button id="del1" onclick="event.stopPropagation();removeSlot(0)" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[9px] w-5 h-5 items-center justify-center font-bold" style="border-radius:0 6px 0 4px;display:none">✕</button>
+              </div>
+              <span class="text-[9px] text-[#2f4110]/40 font-bold uppercase tracking-wide">Foto 1</span>
             </div>
-            <div id="slot2" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden" style="border-radius:4px">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              <img id="thumb2" class="hidden absolute inset-0 w-full h-full object-cover" />
-              <button id="del2" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center font-bold" style="border-radius:0 4px 0 4px">✕</button>
+
+            <div class="flex flex-col items-center gap-1">
+              <div id="slot2" onclick="slotTap(1)" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 transition-transform" style="border-radius:6px">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.35"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <img id="thumb2" class="hidden absolute inset-0 w-full h-full object-cover" />
+                <button id="del2" onclick="event.stopPropagation();removeSlot(1)" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[9px] w-5 h-5 items-center justify-center font-bold" style="border-radius:0 6px 0 4px;display:none">✕</button>
+              </div>
+              <span class="text-[9px] text-[#2f4110]/40 font-bold uppercase tracking-wide">Foto 2</span>
             </div>
-            <div id="slot3" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden" style="border-radius:4px">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              <img id="thumb3" class="hidden absolute inset-0 w-full h-full object-cover" />
-              <button id="del3" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center font-bold" style="border-radius:0 4px 0 4px">✕</button>
+
+            <div class="flex flex-col items-center gap-1">
+              <div id="slot3" onclick="slotTap(2)" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 transition-transform" style="border-radius:6px">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.35"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <img id="thumb3" class="hidden absolute inset-0 w-full h-full object-cover" />
+                <button id="del3" onclick="event.stopPropagation();removeSlot(2)" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[9px] w-5 h-5 items-center justify-center font-bold" style="border-radius:0 6px 0 4px;display:none">✕</button>
+              </div>
+              <span class="text-[9px] text-[#2f4110]/40 font-bold uppercase tracking-wide">Foto 3</span>
             </div>
+
           </div>
         </div>
 
-        <button id="btnCamera" class="w-full py-4 text-sm font-semibold text-[#2f4110] active:bg-[#E5E0D6] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]" style="-webkit-tap-highlight-color: rgba(0,0,0,0.1)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          Tambah via Kamera
-        </button>
-        <button id="btnGallery" class="w-full py-4 text-sm font-semibold text-[#2f4110] active:bg-[#E5E0D6] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]" style="-webkit-tap-highlight-color: rgba(0,0,0,0.1)">
+        <button id="btnGallery" class="w-full py-4 text-sm font-semibold text-[#2f4110] active:bg-[#E5E0D6] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]" style="-webkit-tap-highlight-color:rgba(0,0,0,0.08)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          Tambah dari Galeri
+          Pilih dari Galeri
         </button>
-        <button id="btnIdentify" class="hidden w-full py-4 text-sm font-bold text-[#F1ECE2] bg-[#2f4110] active:bg-[#1a2509] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]" style="-webkit-tap-highlight-color: rgba(0,0,0,0.1)">
-          Identifikasi Sekarang
+        <button id="btnIdentify" class="hidden w-full py-4 text-sm font-bold text-[#F1ECE2] bg-[#2f4110] active:bg-[#1a2509] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]" style="-webkit-tap-highlight-color:rgba(0,0,0,0.08)">
+          ✦ Identifikasi Sekarang
         </button>
-        <button id="btnCancel" class="w-full py-3 text-xs text-[#2f4110]/50 active:bg-[#E5E0D6] transition-colors" style="-webkit-tap-highlight-color: rgba(0,0,0,0.1)">Batal</button>
+        <button id="btnCancel" class="w-full py-3 text-xs text-[#2f4110]/50 active:bg-[#E5E0D6] transition-colors" style="-webkit-tap-highlight-color:rgba(0,0,0,0.08)">Batal</button>
       </div>
     </div>
   </main>
@@ -345,7 +354,6 @@
     const photoPreview = document.getElementById('photoPreview');
     const galleryInput = document.getElementById('galleryInput');
     const pickerModal = document.getElementById('pickerModal');
-    const btnCamera = document.getElementById('btnCamera');
     const btnGallery = document.getElementById('btnGallery');
     const btnCancel = document.getElementById('btnCancel');
     const btnIdentify = document.getElementById('btnIdentify');
@@ -357,7 +365,7 @@
 
     // --- State ---
     let status = 'idle';
-    let collectedImages = [];
+    let collectedImages = []; // max 3
 
     // --- Parallax ---
     window.addEventListener('mousemove', (e) => {
@@ -392,7 +400,7 @@
       }
     }
 
-    // --- Thumbnail Slots ---
+    // --- Slot Elements ---
     const thumbEls = [
       document.getElementById('thumb1'),
       document.getElementById('thumb2'),
@@ -403,17 +411,26 @@
       document.getElementById('del2'),
       document.getElementById('del3'),
     ];
+    const slots = [
+      document.getElementById('slot1'),
+      document.getElementById('slot2'),
+      document.getElementById('slot3'),
+    ];
 
     function refreshSlots() {
       for (let i = 0; i < 3; i++) {
         if (collectedImages[i]) {
           thumbEls[i].src = collectedImages[i];
           thumbEls[i].classList.remove('hidden');
-          delBtns[i].classList.remove('hidden');
+          delBtns[i].style.display = 'flex';
+          slots[i].style.borderStyle = 'solid';
+          slots[i].style.borderColor = '#2f4110';
         } else {
           thumbEls[i].src = '';
           thumbEls[i].classList.add('hidden');
-          delBtns[i].classList.add('hidden');
+          delBtns[i].style.display = 'none';
+          slots[i].style.borderStyle = 'dashed';
+          slots[i].style.borderColor = 'rgba(47,65,16,0.3)';
         }
       }
       if (collectedImages.length > 0) {
@@ -422,75 +439,58 @@
       } else {
         btnIdentify.classList.add('hidden');
       }
-      const full = collectedImages.length >= 3;
-      btnCamera.disabled = full;
-      btnGallery.disabled = full;
-      btnCamera.style.opacity = full ? '0.4' : '1';
-      btnGallery.style.opacity = full ? '0.4' : '1';
     }
 
-    delBtns.forEach((btn, i) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        collectedImages.splice(i, 1);
+    // --- Global: slot tap → open camera ---
+    window.slotTap = function(i) {
+      if (collectedImages[i]) return; // already filled, tap del to remove
+      triggerCamera();
+    };
+
+    window.removeSlot = function(i) {
+      collectedImages.splice(i, 1);
+      refreshSlots();
+    };
+
+    // --- Dynamic input factory ---
+    function triggerCamera() {
+      const old = document.getElementById('_dynCam');
+      if (old) old.remove();
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.id = '_dynCam';
+      inp.accept = 'image/*';
+      inp.setAttribute('capture', 'environment');
+      inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;';
+      document.body.appendChild(inp);
+      inp.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          await handleFileAdd(file);
+          refreshSlots();
+        }
+        inp.remove();
+      });
+      setTimeout(() => inp.click(), 50);
+    }
+
+    function triggerGallery() {
+      const old = document.getElementById('_dynGal');
+      if (old) old.remove();
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.id = '_dynGal';
+      inp.accept = 'image/*';
+      inp.multiple = true;
+      inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;';
+      document.body.appendChild(inp);
+      inp.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files || []).slice(0, 3 - collectedImages.length);
+        for (const f of files) await handleFileAdd(f);
         refreshSlots();
+        inp.remove();
       });
-    });
-
-    // --- Image Compression ---
-    const compressImage = (dataUrl) => {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-          const MAX = 800;
-          let w = img.width, h = img.height;
-          if (w > MAX || h > MAX) {
-            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-            else { w = Math.round(w * MAX / h); h = MAX; }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.65));
-        };
-        img.src = dataUrl;
-      });
-    };
-
-    const readFile = (file) => new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.readAsDataURL(file);
-    });
-
-    const handleFileAdd = async (file) => {
-      if (!file || collectedImages.length >= 3) return;
-      const dataUrl = await readFile(file);
-      const compressed = await compressImage(dataUrl);
-      collectedImages.push(compressed);
-    };
-
-    // --- Dynamic Input Factory ---
-    // Creates a fresh <input> each time to bypass Android chooser caching
-    function createFileInput(useCamera) {
-      // Remove any previous dynamic input
-      const prev = document.getElementById('_dynInput');
-      if (prev) prev.remove();
-
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.id = '_dynInput';
-      input.accept = 'image/*';
-      input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;';
-
-      if (useCamera) {
-        // Force camera on Android/iOS
-        input.setAttribute('capture', 'environment');
-      }
-      // No capture = gallery/file picker on Android
-
-      document.body.appendChild(input);
-      return input;
+      setTimeout(() => inp.click(), 50);
     }
 
     // --- Picker Modal ---
@@ -504,53 +504,12 @@
 
     photoContainer.addEventListener('click', openPicker);
     btnCancel.addEventListener('click', closePicker);
-    pickerModal.addEventListener('click', (e) => {
-      if (e.target === pickerModal) closePicker();
-    });
-
-    // Camera button — dynamic input with capture="environment"
-    btnCamera.addEventListener('click', () => {
-      if (collectedImages.length >= 3) return;
-      const input = createFileInput(true);
-      input.addEventListener('change', async (e) => {
-        const files = e.target.files;
-        if (files && files[0]) {
-          await handleFileAdd(files[0]);
-          refreshSlots();
-        }
-        input.remove();
-      });
-      // Small delay ensures DOM is ready before click on mobile
-      setTimeout(() => input.click(), 50);
-    });
-
-    // Gallery button — dynamic input WITHOUT capture (opens gallery directly)
+    pickerModal.addEventListener('click', (e) => { if (e.target === pickerModal) closePicker(); });
     btnGallery.addEventListener('click', () => {
       if (collectedImages.length >= 3) return;
-      const input = createFileInput(false);
-      input.multiple = collectedImages.length < 2; // allow multi-select if slots available
-      input.addEventListener('change', async (e) => {
-        const files = Array.from(e.target.files || []).slice(0, 3 - collectedImages.length);
-        for (const f of files) await handleFileAdd(f);
-        refreshSlots();
-        input.remove();
-      });
-      setTimeout(() => input.click(), 50);
+      triggerGallery();
     });
-
-    // Also wire static galleryInput for fallback
-    galleryInput.addEventListener('change', async (e) => {
-      const files = Array.from(e.target.files || []).slice(0, 3 - collectedImages.length);
-      for (const f of files) await handleFileAdd(f);
-      refreshSlots();
-      e.target.value = '';
-    });
-
-    btnIdentify.addEventListener('click', () => {
-      closePicker();
-      identifyPlant();
-    });
-
+    btnIdentify.addEventListener('click', () => { closePicker(); identifyPlant(); });
     resetBtn.addEventListener('click', () => {
       status = 'idle';
       collectedImages = [];
@@ -559,7 +518,36 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // --- Identify Plant ---
+    // --- Compression ---
+    const compressImage = (dataUrl) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.65));
+      };
+      img.src = dataUrl;
+    });
+
+    const handleFileAdd = async (file) => {
+      if (!file || collectedImages.length >= 3) return;
+      const dataUrl = await new Promise(res => {
+        const r = new FileReader();
+        r.onloadend = () => res(r.result);
+        r.readAsDataURL(file);
+      });
+      const compressed = await compressImage(dataUrl);
+      collectedImages.push(compressed);
+    };
+
+    // --- Identify ---
     const identifyPlant = async () => {
       if (collectedImages.length === 0) return;
       status = 'loading';
@@ -577,12 +565,10 @@
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
         if (!result.text) throw new Error("Tidak ada respon dari API.");
-        renderFormattedText(result.text);
+        renderFormattedText(result.text, collectedImages);
         status = 'success';
         updateUI();
-        setTimeout(() => {
-          resultsBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 300);
+        setTimeout(() => resultsBox.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
       } catch (error) {
         console.error("Error:", error);
         alert("Gagal menganalisis gambar.\nError: " + error.message);
@@ -591,14 +577,22 @@
       }
     };
 
-    // --- Render Text ---
-    const renderFormattedText = (text) => {
+    // --- Render ---
+    const renderFormattedText = (text, imgs) => {
+      let html = '';
+      // Show all collected photos in results
+      if (imgs && imgs.length > 0) {
+        html += '<div style="display:flex;gap:6px;margin-bottom:14px;">';
+        imgs.forEach(src => {
+          html += `<img src="${src}" style="flex:1;min-width:0;aspect-ratio:1;object-fit:cover;border-radius:4px;border:1.5px solid #2f4110;" />`;
+        });
+        html += '</div>';
+      }
       const boldedText = text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#2f4110]">$1</strong>');
-      const htmlContent = boldedText.split('\n').map(line => {
-        if (line.trim() === '') return '';
-        return `<span class="block mb-3 leading-relaxed">${line}</span>`;
-      }).join('');
-      resultsContent.innerHTML = htmlContent;
+      boldedText.split('\n').forEach(line => {
+        if (line.trim()) html += `<span class="block mb-3 leading-relaxed">${line}</span>`;
+      });
+      resultsContent.innerHTML = html;
     };
 
     // --- Init ---

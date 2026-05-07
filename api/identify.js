@@ -2,75 +2,77 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { images } = req.body; 
-    if (!images || images.length === 0) {
-      return res.status(400).json({ error: 'Tidak ada gambar yang dikirim.' });
-    }
+    const { images } = req.body;
+    if (!images || images.length === 0)
+      return res.status(400).json({ error: 'Tidak ada gambar.' });
 
-    const apiKey = "process.env.GEMINI_API_KEY";
+    const apiKey = "2b10STlXC1sQFsoh2vpH5KqZc";
+    const boundary = '----RambanBoundary' + Date.now();
+    const parts = [];
 
-    const promptText = `Kamu adalah ahli botani profesional di Indonesia. 
-    Identifikasi tanaman dari gambar berikut dengan detail namun tetap mudah dibaca.
-    Berikan informasi dalam bahasa Indonesia dengan format Markdown sebagai berikut:
-
-    **Nama Umum**: [Nama populer & lokal di Indonesia]
-    **Nama Ilmiah**: *[Nama Ilmiah]*
-    **Genus & Famili**: [Genus] - [Famili]
-
-    ---
-    **🌟 Fun Fact**: 
-    [Berikan 1 fakta unik atau menarik tentang tanaman ini]
-
-    **🌿 Manfaat Sehari-hari**: 
-    [Sebutkan manfaat praktis, kesehatan, atau kegunaannya di lingkungan rumah]
-
-    **🛠️ Kegunaan Lainnya**: 
-    [Sebutkan kegunaan lain seperti untuk industri, hiasan, atau filosofi tertentu]
-
-    Jika gambar bukan tanaman, jawab: 'Tanaman tidak dapat diidentifikasi. Mohon unggah foto bagian daun, bunga, atau batang yang lebih jelas.'`;
-
-    const parts = [{ text: promptText }];
-
-    images.forEach((img) => {
-      let mimeType = img.mimeType.includes('png') ? 'image/png' : 'image/jpeg';
-      parts.push({
-        inline_data: {
-          mime_type: mimeType,
-          data: img.imageData 
-        }
-      });
+    // PlantNet requires ONE organs field per image — must be equal length
+    images.forEach((img, i) => {
+      // organs field for each image
+      parts.push(Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="organs"\r\n\r\nauto\r\n`,
+        'utf8'
+      ));
+      // image part
+      const ext = img.mimeType.includes('png') ? 'png' : 'jpg';
+      parts.push(Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="images"; filename="plant${i+1}.${ext}"\r\nContent-Type: ${img.mimeType}\r\n\r\n`,
+        'utf8'
+      ));
+      parts.push(Buffer.from(img.imageData, 'base64'));
+      parts.push(Buffer.from('\r\n', 'utf8'));
     });
 
-    const payload = {
-      contents: [{ parts: parts }],
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 800, 
-      }
-    };
+    parts.push(Buffer.from(`--${boundary}--\r\n`, 'utf8'));
+    const fullBody = Buffer.concat(parts);
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
+    const url = `https://my-api.plantnet.org/v2/identify/all?api-key=${apiKey}&lang=id&include-related-images=false&nb-results=5`;
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        'Content-Length': fullBody.length.toString(),
+      },
+      body: fullBody
     });
 
     const data = await response.json();
+    if (!response.ok)
+      return res.status(response.status).json({ error: data.message || `PlantNet error ${response.status}` });
 
-    if (!response.ok) {
-      return res.status(response.status).json({ 
-        error: data.error?.message || `Gemini API error ${response.status}` 
+    const top = data.results?.slice(0, 3) || [];
+    if (top.length === 0)
+      return res.status(200).json({ text: "Tanaman tidak dapat diidentifikasi. Coba foto bagian daun atau bunga lebih jelas." });
+
+    const best = top[0];
+    const sp = best.species;
+    const confidence = Math.round(best.score * 100);
+    const commonNames = sp.commonNames?.length > 0 ? sp.commonNames.join(', ') : 'Tidak tersedia';
+
+    let text = `**Nama Umum**: ${commonNames}\n`;
+    text += `**Nama Ilmiah**: ${sp.scientificName || sp.scientificNameWithoutAuthor}\n`;
+    text += `**Genus**: ${sp.genus?.scientificNameWithoutAuthor || '-'}\n`;
+    text += `**Famili**: ${sp.family?.scientificNameWithoutAuthor || '-'}\n`;
+    text += `**Tingkat Keyakinan**: ${confidence}% (dari ${images.length} foto)\n\n`;
+
+    if (top.length > 1) {
+      text += `**Kemungkinan Lainnya**:\n`;
+      top.slice(1).forEach((r, i) => {
+        const pct = Math.round(r.score * 100);
+        const cn = r.species.commonNames?.[0] || r.species.scientificNameWithoutAuthor;
+        text += `${i+2}. ${cn} — ${r.species.scientificNameWithoutAuthor} (${pct}%)\n`;
       });
+      text += '\n';
     }
-
-    const text = data.candidates[0]?.content?.parts[0]?.text || "Maaf, terjadi kendala saat menganalisis gambar.";
+    text += `**Sisa Kuota**: ${data.remainingIdentificationRequests ?? '-'} request/hari`;
 
     return res.status(200).json({ text });
 
