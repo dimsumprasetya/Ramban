@@ -137,8 +137,6 @@ module.exports = async function handler(req, res) {
     text += `---\n`;
     text += `**📊 Tingkat Keyakinan**: ${confidence}% (dari ${images.length} foto)\n`;
     if (alternatives) text += `\n**🔍 Kemungkinan Lainnya**:\n${alternatives}\n`;
-    if (wikiUrl) text += `\n**📖 Sumber**: [Wikipedia](${wikiUrl})`;
-    text += `\n**⏳ Sisa Kuota**: ${remaining} request/hari`;
 
     return res.status(200).json({ text });
 
