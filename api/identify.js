@@ -2,7 +2,6 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
@@ -12,7 +11,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Tidak ada gambar.' });
 
     // ── STEP 1: Identifikasi via PlantNet ──
-    const plantNetKey = process.env.PLANTNET_API_KEY || "2b10STlXC1sQFsoh2vpH5KqZc";
+    const plantNetKey = "2b10STlXC1sQFsoh2vpH5KqZc";
     const boundary = '----RambanBoundary' + Date.now();
     const parts = [];
 
@@ -91,7 +90,7 @@ module.exports = async function handler(req, res) {
                 || null;
 
     if (wikiData) {
-      // Ambil 3 ayat pertama
+      // Ambil 3 kalimat pertama
       const sentences = wikiData.extract
         .replace(/\n/g, ' ')
         .split(/(?<=[.!?])\s+/)
@@ -101,7 +100,7 @@ module.exports = async function handler(req, res) {
       wikiUrl = wikiData.content_urls?.desktop?.page || '';
     }
 
-    // ── STEP 3: Susun output dengan format prompt Markdown ──
+    // ── STEP 3: Susun output dengan format prompt ──
     let text = '';
     text += `**Nama Umum**: ${commonNamesID || scientificName}\n`;
     text += `**Nama Ilmiah**: *${scientificName}*\n`;
@@ -133,4 +132,17 @@ module.exports = async function handler(req, res) {
       lainnya: 'Berpotensi untuk dikembangkan dalam bidang etnobotani dan konservasi.'
     };
 
-    text += `**🌿 Manfaat Sehari-hari**:\n
+    text += `**🌿 Manfaat Sehari-hari**:\n${uses.manfaat}\n\n`;
+    text += `**🛠️ Kegunaan Lainnya**:\n${uses.lainnya}\n\n`;
+    text += `---\n`;
+    text += `**📊 Tingkat Keyakinan**: ${confidence}% (dari ${images.length} foto)\n`;
+    if (alternatives) text += `\n**🔍 Kemungkinan Lainnya**:\n${alternatives}\n`;
+    if (wikiUrl) text += `\n**📖 Sumber**: [Wikipedia](${wikiUrl})`;
+    text += `\n**⏳ Sisa Kuota**: ${remaining} request/hari`;
+
+    return res.status(200).json({ text });
+
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
