@@ -3,35 +3,57 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // Handle preflight request (CORS)
   if (req.method === 'OPTIONS') return res.status(200).end();
+  
+  // Pastikan hanya menerima POST request
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { images } = req.body; // array of { imageData, mimeType }
+    const { images } = req.body; // Menerima array of { imageData, mimeType }
     if (!images || images.length === 0) {
       return res.status(400).json({ error: 'Tidak ada gambar yang dikirim.' });
     }
 
-    // API Key Plant.id kamu
-    const apiKey = "iUUQGTPmSSPJQh6pVpXD5X6f9TwbotskFF34Jfry5FxUkSpWsw";
+    // API Key Google Gemini yang kamu berikan
+    const apiKey = "AIzaSyAJ5XHkQXtaU9y6zD-h9k-LJcMpXg4NpqI";
 
-    // Plant.id menerima array berisi Base64 string. 
-    // Kita gabungkan mimeType dan imageData menjadi format Data URI standar.
-    const base64Images = images.map(img => `data:${img.mimeType};base64,${img.imageData}`);
+    // Menyusun prompt instruksi khusus dengan penekanan pada konteks lokal Indonesia
+    const promptText = "Kamu adalah ahli botani di Indonesia. Identifikasi tanaman dari gambar berikut. Berikan informasi dalam bahasa Indonesia menggunakan format persis seperti ini:\n\n**Nama Umum**: [Tuliskan nama umum dan nama lokal/daerah di Indonesia jika ada, pisahkan dengan koma jika banyak]\n**Nama Ilmiah**: *[Nama Ilmiah]*\n**Genus**: [Genus]\n**Famili**: [Famili]\n\nJika ada beberapa gambar, itu adalah bagian dari tanaman yang sama. Jika kamu yakin 100% itu bukan gambar tanaman atau gambar sangat tidak jelas, jawab: 'Tanaman tidak dapat diidentifikasi. Coba foto bagian daun atau bunga dengan lebih jelas.'";
 
-    // Konfigurasi payload untuk Plant.id
+    // Format data untuk Gemini API
+    const parts = [
+      { text: promptText }
+    ];
+
+    // Menambahkan semua gambar dari aplikasi ke dalam request AI
+    images.forEach((img) => {
+      // Pastikan mimeType sesuai standar (image/jpeg atau image/png)
+      let mimeType = img.mimeType.includes('png') ? 'image/png' : 'image/jpeg';
+      
+      parts.push({
+        inline_data: {
+          mime_type: mimeType,
+          data: img.imageData // Data base64 murni dari front-end
+        }
+      });
+    });
+
     const payload = {
-      images: base64Images,
-      // Meminta API untuk mengembalikan detail tambahan seperti nama umum dan taksonomi
-      plant_details: ["common_names", "taxonomy"] 
+      contents: [{ parts: parts }],
+      generationConfig: {
+        temperature: 0.1, // Dibuat rendah agar jawaban akurat, konsisten, dan tidak mengarang
+        maxOutputTokens: 300,
+      }
     };
 
-    // Menggunakan endpoint v2 dari Plant.id
-    const response = await fetch('https://api.plant.id/v2/identify', {
+    // Tembak ke endpoint resmi Gemini 1.5 Flash
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Api-Key': apiKey
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     });
@@ -39,54 +61,16 @@ module.exports = async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
+      // Menangkap pesan error dari Google jika ada masalah
       return res.status(response.status).json({ 
-        error: data.error || `Plant.id error ${response.status}` 
+        error: data.error?.message || `Gemini API error ${response.status}` 
       });
     }
 
-    const suggestions = data.suggestions || [];
-    if (suggestions.length === 0) {
-      return res.status(200).json({ 
-        text: "Tanaman tidak dapat diidentifikasi. Coba foto bagian daun atau bunga dengan lebih jelas." 
-      });
-    }
+    // Mengambil teks balasan dari struktur JSON Gemini
+    const text = data.candidates[0]?.content?.parts[0]?.text || "Terjadi kesalahan saat memproses gambar.";
 
-    // Mengambil hasil dengan tingkat keyakinan tertinggi (urutan pertama)
-    const best = suggestions[0];
-    const details = best.plant_details || {};
-    const confidence = Math.round(best.probability * 100);
-
-    // Mengambil nama umum (jika ada)
-    let commonNames = 'Tidak tersedia';
-    if (details.common_names && details.common_names.length > 0) {
-      commonNames = details.common_names.join(', ');
-    }
-
-    // Mengambil data taksonomi
-    const taxonomy = details.taxonomy || {};
-    const genus = taxonomy.genus || '-';
-    const family = taxonomy.family || '-';
-
-    // Menyusun teks balasan sesuai format Markdown yang diinginkan
-    let text = `**Nama Umum**: ${commonNames}\n`;
-    text += `**Nama Ilmiah**: *${best.plant_name}*\n`;
-    text += `**Genus**: ${genus}\n`;
-    text += `**Famili**: ${family}\n`;
-    text += `**Tingkat Keyakinan**: ${confidence}% (dari ${images.length} foto)\n\n`;
-
-    // Menambahkan kemungkinan tanaman lain jika ada (opsional)
-    if (suggestions.length > 1) {
-      text += `**Kemungkinan Lainnya**:\n`;
-      // Mengambil maksimal 3 kemungkinan lainnya
-      suggestions.slice(1, 4).forEach((r, i) => {
-        const pct = Math.round(r.probability * 100);
-        const cn = (r.plant_details && r.plant_details.common_names && r.plant_details.common_names.length > 0) 
-          ? r.plant_details.common_names[0] 
-          : r.plant_name;
-        text += `${i + 2}. ${cn} — *${r.plant_name}* (${pct}%)\n`;
-      });
-    }
-
+    // Mengirimkan hasil identifikasi kembali ke aplikasi
     return res.status(200).json({ text });
 
   } catch (err) {
