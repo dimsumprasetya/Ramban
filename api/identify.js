@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
     
     // Ganti dengan nama model Vision yang tersedia di dashboard Databyte kamu.
     // Contoh model yang biasanya mendukung gambar: gpt-4o-mini, gpt-4o, atau claude-3-5-sonnet
-    const modelName = process.env.DATABYTE_MODEL || "gpt-4o-mini";
+    const modelName = process.env.DATABYTE_MODEL || "databyte-m1";
 
     // ── STEP 1: Susun Prompt Instruksi ──
     const promptText = `Kamu adalah ahli botani profesional di Indonesia. 
