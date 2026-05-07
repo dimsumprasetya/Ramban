@@ -14,70 +14,81 @@ module.exports = async function handler(req, res) {
 
     // ── KONFIGURASI API DATABYTE ──
     const apiKey = process.env.DATABYTE_API_KEY || "sk-db-Tkd8uDYoISi8gy9QjrDImOgM3kCNWwjjJFKUhDqoMR06IqhA";
-    
-    // URL Endpoint sesuai dengan panduan troubleshooting (bisa disesuaikan jika berbeda)
-    const BASE_URL = "https://ai.databyte.co.id/v1"
+    const BASE_URL = "https://ai.databyte.co.id/v1";
 
-response = requests.post(
-    f"{BASE_URL}/chat/completions",
-    headers={
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    },
-    json={
-        "model": "databyte-m1",
-        "messages": [
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "What is 2+2?"}
-        ],
-        "max_tokens": 1024
-    }
-); 
+    // ── STEP 1: Susun Prompt Instruksi ──
+    const promptText = `Kamu adalah ahli botani profesional di Indonesia. 
+    Identifikasi tanaman dari gambar berikut dengan detail namun tetap mudah dibaca.
+    Berikan informasi dalam bahasa Indonesia dengan format Markdown sebagai berikut:
 
-    // ── FORMAT MULTIPART/FORM-DATA ──
-    const boundary = '----DatabyteBoundary' + Date.now();
-    const parts = [];
+    **Nama Umum**: [Nama populer & lokal di Indonesia]
+    **Nama Ilmiah**: *[Nama Ilmiah]*
+    **Genus & Famili**: [Genus] - [Famili]
 
-    // Memasukkan gambar ke dalam form dengan field name "image" sesuai petunjuk curl
-    images.forEach((img, i) => {
-      const ext = img.mimeType.includes('png') ? 'png' : 'jpg';
-      
-      parts.push(Buffer.from(
-        `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="plant${i+1}.${ext}"\r\nContent-Type: ${img.mimeType}\r\n\r\n`, 'utf8'
-      ));
-      // Mengubah string base64 dari frontend kembali menjadi file binary (Buffer)
-      parts.push(Buffer.from(img.imageData, 'base64'));
-      parts.push(Buffer.from('\r\n', 'utf8'));
+    ---
+    **🌟 Fun Fact**: 
+    [Berikan 1 fakta unik atau menarik tentang tanaman ini]
+
+    **🌿 Manfaat Sehari-hari**: 
+    [Sebutkan manfaat praktis, kesehatan, atau kegunaannya di lingkungan rumah]
+
+    **🛠️ Kegunaan Lainnya**: 
+    [Sebutkan kegunaan lain seperti untuk industri, hiasan, atau filosofi tertentu]
+
+    Jika gambar bukan tanaman, jawab: 'Tanaman tidak dapat diidentifikasi. Mohon unggah foto bagian daun, bunga, atau batang yang lebih jelas.'`;
+
+    // ── STEP 2: Format Payload JSON sesuai standar API OpenAI/Databyte ──
+    const content = [
+      { type: "text", text: promptText }
+    ];
+
+    images.forEach((img) => {
+      content.push({
+        type: "image_url",
+        image_url: {
+          url: `data:${img.mimeType};base64,${img.imageData}`
+        }
+      });
     });
-    
-    parts.push(Buffer.from(`--${boundary}--\r\n`, 'utf8'));
-    const fullBody = Buffer.concat(parts);
 
-    // ── KIRIM REQUEST KE DATABYTE ──
+    const payload = {
+      model: "databyte-m1", // Sesuai dengan nama model di kodemu
+      messages: [
+        {
+          role: "user",
+          content: content
+        }
+      ],
+      max_tokens: 1024,
+      temperature: 0.3
+    };
+
+    // ── STEP 3: Tembak ke Endpoint Databyte Menggunakan Fetch (Bukan Requests) ──
+    const url = `${BASE_URL}/chat/completions`;
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Content-Length': fullBody.length.toString()
+        'Content-Type': 'application/json'
       },
-      body: fullBody
+      body: JSON.stringify(payload)
     });
 
     const data = await response.json();
 
     if (!response.ok) {
       return res.status(response.status).json({ 
-        error: data.error?.message || data.message || `Databyte API error ${response.status}: Silakan cek kembali API Key atau Endpoint URL.` 
+        error: data.error?.message || data.message || `Databyte API error ${response.status}: Silakan cek kembali API Key atau limit model.` 
       });
     }
 
-    // ── PARSING BALASAN DATABYTE ──
-    // Karena kita belum melihat bentuk asli balasan JSON Databyte, 
-    // kode ini akan mencoba menangkap teks dari field yang umum dipakai (text/result/message)
-    let text = data.text || data.result || data.message || data.description;
+    // ── STEP 4: Ambil Balasan ──
+    const text = data.choices?.[0]?.message?.content || "Terjadi kesalahan saat memproses balasan dari server Databyte.";
 
-    // Jika formatnya ternyata berbeda, kembalikan JSON mentah agar bisa dianalisis
-    if (!text) {
-      text = "Identifikasi berhasil, namun format respons Databyte berbeda. Berikut data mentahnya:\n\n
-http://googleusercontent.com/immersive_entry_chip/0
+    return res.status(200).json({ text });
+
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
