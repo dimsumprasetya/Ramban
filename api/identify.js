@@ -14,7 +14,7 @@ module.exports = async function handler(req, res) {
 
     // ── KONFIGURASI API DATABYTE ──
     // Sangat disarankan menyimpannya di Vercel Environment Variables
-    const apiKey = process.env.DATABYTE_API_KEY || "sk-db-ceVnE7";
+    const apiKey = process.env.DATABYTE_API_KEY || "sk-db-UlP7IjuSX9W2QsAfABwak2eirnxwYaC4y5ywOfD61uMlSvvG";
     
     // Ganti dengan nama model Vision yang tersedia di dashboard Databyte kamu.
     // Contoh model yang biasanya mendukung gambar: gpt-4o-mini, gpt-4o, atau claude-3-5-sonnet
