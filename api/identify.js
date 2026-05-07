@@ -16,7 +16,23 @@ module.exports = async function handler(req, res) {
     const apiKey = process.env.DATABYTE_API_KEY || "sk-db-Tkd8uDYoISi8gy9QjrDImOgM3kCNWwjjJFKUhDqoMR06IqhA";
     
     // URL Endpoint sesuai dengan panduan troubleshooting (bisa disesuaikan jika berbeda)
-    const url = 'https://ai.databyte.co.id/v1/identify-plant'; 
+    const BASE_URL = "https://ai.databyte.co.id/v1"
+
+response = requests.post(
+    f"{BASE_URL}/chat/completions",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    },
+    json={
+        "model": "databyte-m1",
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "What is 2+2?"}
+        ],
+        "max_tokens": 1024
+    }
+); 
 
     // ── FORMAT MULTIPART/FORM-DATA ──
     const boundary = '----DatabyteBoundary' + Date.now();
