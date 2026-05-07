@@ -14,7 +14,6 @@ module.exports = async function handler(req, res) {
 
     const apiKey = "AIzaSyAJ5XHkQXtaU9y6zD-h9k-LJcMpXg4NpqI";
 
-    // Prompt dengan tambahan Fun Fact dan Manfaat
     const promptText = `Kamu adalah ahli botani profesional di Indonesia. 
     Identifikasi tanaman dari gambar berikut dengan detail namun tetap mudah dibaca.
     Berikan informasi dalam bahasa Indonesia dengan format Markdown sebagai berikut:
@@ -55,7 +54,6 @@ module.exports = async function handler(req, res) {
       }
     };
 
-    // MENGGUNAKAN MODEL TERBARU: gemini-2.0-flash
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
