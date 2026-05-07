@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
     if (!images || images.length === 0)
       return res.status(400).json({ error: 'Tidak ada gambar.' });
 
-    const apiKey = "process.env.GEMINI_API_KEY";
+    const apiKey = "AIzaSyBZcMHV8X8cn-AEtPEvjM9OULUKm_-TpE0";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     // Build parts: text prompt + all images
