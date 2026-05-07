@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Tidak ada gambar yang dikirim.' });
     }
 
-    const apiKey = "AIzaSyAJ5XHkQXtaU9y6zD-h9k-LJcMpXg4NpqI";
+    const apiKey = "process.env.GEMINI_API_KEY";
 
     const promptText = `Kamu adalah ahli botani profesional di Indonesia. 
     Identifikasi tanaman dari gambar berikut dengan detail namun tetap mudah dibaca.
