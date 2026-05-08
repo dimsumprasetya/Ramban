@@ -203,7 +203,7 @@
   </svg>
 
   <!-- Container Utama (Judul + Foto) -->
-  <div class="relative z-10 w-full max-w-4xl flex flex-col items-center pt-20 sm:pt-28">
+  <div id="heroSection" class="relative z-10 w-full max-w-4xl flex flex-col items-center pt-20 sm:pt-28">
     
     <!-- Giant Typography -->
     <h1 
@@ -213,7 +213,7 @@
     </h1>
 
     <!-- Photo Container -->
-    <div 
+    <div id="photoSection"
       class="relative z-20 w-full flex justify-center transition-transform duration-200 ease-out -mt-[3vw] sm:-mt-[1.5rem]" 
       style="transform: translateY(calc(var(--mouse-y) * 8px + var(--scroll-y) * 0.05px));">
       
@@ -260,7 +260,7 @@
       </button>
       
       <div class="flex flex-col">
-        <span class="text-[10px] uppercase tracking-widest opacity-60 mb-4 font-bold">Identifikasi Tanaman:</span>
+        <span class="text-[10px] uppercase tracking-widest opacity-60 mb-4 font-bold">Identifikasi Tanaman — Pl@ntNet:</span>
         <div id="resultsContent" class="prose prose-sm font-serif text-[#2b2b2b]">
           <!-- Teks akan dirender disini menggunakan JavaScript -->
         </div>
@@ -389,6 +389,7 @@
       if (status === 'idle') {
         photoContainer.classList.add('is-idle');
         idleOverlay.style.display = 'flex';
+        document.getElementById('heroSection').style.display = '';
         if (collectedImages.length === 0) {
           photoPreview.src = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800&auto=format&fit=crop";
         }
@@ -397,6 +398,8 @@
         loadingOverlay.classList.add('flex');
       } else if (status === 'success') {
         resultsBox.classList.remove('hidden');
+        // Sembunyikan foto besar & hero saat hasil tampil
+        document.getElementById('heroSection').style.display = 'none';
       }
     }
 
