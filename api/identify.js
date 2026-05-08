@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Tidak ada gambar.' });
 
     // ── STEP 1: Identifikasi via PlantNet ──
-    const plantNetKey = "2b10STlXC1sQFsoh2vpH5KqZc";
+    const plantNetKey = "2b10bzCZ1eKEQBQFjMV5kWnTB";
     const boundary = '----RambanBoundary' + Date.now();
     const parts = [];
 
