@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
     if (!images || images.length === 0)
       return res.status(400).json({ error: 'Tidak ada gambar.' });
 
-    const apiKey = "2b10STlXC1sQFsoh2vpH5KqZc";
+    const apiKey = "2b10bzCZ1eKEQBQFjMV5kWnTB";
     const boundary = '----RambanBoundary' + Date.now();
     const parts = [];
 
