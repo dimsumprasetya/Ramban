@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html>`
 <html lang="id">
 <head>
   <meta charset="UTF-8">
@@ -588,18 +588,9 @@
 
     // --- Global slot tap → tutup modal → tampil guide → buka kamera ---
     window.slotTap = function(i) {
-      if (collectedImages[i]) return;
-      // 1. Tutup modal picker dulu
-      closePicker();
-
-        });
-      }, 150);
-    };
-
-    window.removeSlot = function(i) {
-      collectedImages.splice(i, 1);
-      refreshSlots();
-    };
+   if (collectedImages[i]) return; // Jika slot sudah terisi, abaikan (klik tombol '✕' untuk menghapus)
+  triggerCamera();
+};
 
     // --- Dynamic input factory ---
     function triggerCamera() {
