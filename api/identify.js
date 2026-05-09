@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Tidak ada gambar.' });
 
     // ── STEP 1: PlantNet ──
-    const plantNetKey = "2b10STlXC1sQFsoh2vpH5KqZc";
+    const plantNetKey = "2b10bzCZ1eKEQBQFjMV5kWnTB";
     const boundary = '----RambanBoundary' + Date.now();
     const parts = [];
     images.forEach((img, i) => {
@@ -106,8 +106,7 @@ module.exports = async function handler(req, res) {
     text += `---\n`;
     text += `**📊 Tingkat Keyakinan**: ${confidence}% (dari ${images.length} foto)\n`;
     if (alternatives) text += `\n**🔍 Kemungkinan Lainnya**:\n${alternatives}\n`;
-    if (wikiUrl) text += `\n**📖 Sumber**: ${wikiUrl}`;
-    text += `\n**⏳ Sisa Kuota PlantNet**: ${remaining} request/hari`;
+
 
     return res.status(200).json({ text, toxic: isToxic, confidence, scientificName, commonNames: commonNamesID, family });
 
