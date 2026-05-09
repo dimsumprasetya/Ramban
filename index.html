@@ -176,6 +176,76 @@
         height: 60px !important;
       }
     }
+
+    /* Camera overlay guide */
+    #cameraGuide {
+      position: fixed; inset: 0; z-index: 60;
+      background: rgba(0,0,0,0.75);
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px;
+    }
+    #cameraGuide.show { display: flex; }
+    .cam-frame {
+      width: 220px; height: 220px;
+      border: 2px solid #F1ECE2;
+      border-radius: 12px;
+      position: relative;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);
+    }
+    .cam-frame::before, .cam-frame::after,
+    .cam-corner-bl, .cam-corner-br {
+      content: '';
+      position: absolute;
+      width: 24px; height: 24px;
+      border-color: #90cc40;
+      border-style: solid;
+    }
+    .cam-frame::before { top:-2px; left:-2px; border-width: 3px 0 0 3px; border-radius: 10px 0 0 0; }
+    .cam-frame::after  { top:-2px; right:-2px; border-width: 3px 3px 0 0; border-radius: 0 10px 0 0; }
+    .cam-corner-bl     { bottom:-2px; left:-2px; border-width: 0 0 3px 3px; border-radius: 0 0 0 10px; }
+    .cam-corner-br     { bottom:-2px; right:-2px; border-width: 0 3px 3px 0; border-radius: 0 0 10px 0; }
+    .cam-tip {
+      color: #F1ECE2; font-size: 12px; font-weight: 500;
+      text-align: center; max-width: 240px; line-height: 1.6;
+      font-family: sans-serif;
+    }
+    .cam-tip strong { color: #90cc40; display: block; margin-bottom: 4px; }
+
+    /* Toxicity badge */
+    #toxicBadge {
+      display: none;
+      background: #c0392b; color: #fff;
+      font-family: sans-serif; font-size: 12px; font-weight: 700;
+      padding: 10px 16px; margin-bottom: 12px;
+      border-radius: 4px;
+      align-items: center; gap: 8px;
+      animation: pulse 1.5s infinite;
+    }
+    #toxicBadge.show { display: flex; }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0.5); }
+      50% { box-shadow: 0 0 0 6px rgba(192,57,43,0); }
+    }
+
+    /* History panel */
+    #historyPanel {
+      display: none; position: fixed; inset: 0; z-index: 55;
+      background: #3b4d19; overflow-y: auto; padding: 20px 16px;
+    }
+    #historyPanel.show { display: block; }
+    .hist-item {
+      background: #F1ECE2; border-radius: 4px; padding: 10px 12px;
+      margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
+      cursor: pointer; border-left: 4px solid #2f4110;
+    }
+    .hist-item.toxic { border-left-color: #c0392b; }
+    .hist-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+    .hist-info { flex: 1; min-width: 0; }
+    .hist-name { font-size: 13px; font-weight: 600; color: #2f4110; }
+    .hist-latin { font-size: 11px; color: #888; font-style: italic; }
+    .hist-date { font-size: 10px; color: #aaa; margin-top: 2px; }
+
   </style>
 </head>
 <body class="min-h-screen relative flex flex-col items-center select-none">
@@ -251,6 +321,33 @@
     <!-- Gallery input only -->
     <input type="file" accept="image/*" id="galleryInput" class="hidden" multiple />
 
+    <!-- Camera Guide Overlay -->
+    <div id="cameraGuide">
+      <div class="cam-frame">
+        <div class="cam-corner-bl"></div>
+        <div class="cam-corner-br"></div>
+      </div>
+      <div class="cam-tip">
+        <strong>📸 Tips Foto Terbaik</strong>
+        Fokuskan pada <strong>satu helai daun, bunga, atau buah</strong> secara dekat.<br>
+        Hindari memotret seluruh pohon dari jauh.
+      </div>
+      <button onclick="document.getElementById('cameraGuide').classList.remove('show')"
+        style="background:#2f4110;color:#F1ECE2;border:none;padding:10px 24px;font-size:13px;font-weight:700;border-radius:4px;cursor:pointer;font-family:sans-serif;letter-spacing:1px;">
+        MENGERTI, LANJUT FOTO
+      </button>
+    </div>
+
+    <!-- History Panel -->
+    <div id="historyPanel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h2 style="color:#F1ECE2;font-family:Georgia,serif;font-size:20px;margin:0;">📋 Riwayat Pindaian</h2>
+        <button onclick="closeHistory()" style="background:rgba(241,236,226,0.15);color:#F1ECE2;border:none;padding:6px 14px;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;font-family:sans-serif;">✕ Tutup</button>
+      </div>
+      <div id="historyList"></div>
+      <button onclick="clearHistory()" style="width:100%;margin-top:16px;background:rgba(192,57,43,0.2);color:#e74c3c;border:1px solid rgba(192,57,43,0.3);padding:10px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;font-family:sans-serif;letter-spacing:1px;">🗑️ HAPUS SEMUA RIWAYAT</button>
+    </div>
+
     <!-- Results / Editorial Box -->
     <div id="resultsBox" class="hidden mt-10 w-full max-w-md bg-[#F1ECE2] shadow-2xl text-[#2b2b2b] text-sm leading-relaxed border-t-8 border-[#2f4110] animate-fade-in transition-transform duration-300 ease-out" 
          style="transform: translateY(calc(var(--mouse-y) * 4px));">
@@ -260,7 +357,11 @@
       </button>
       
       <div class="flex flex-col">
-        <span class="text-[10px] uppercase tracking-widest opacity-60 mb-4 font-bold">Identifikasi Tanaman:</span>
+        <div id="toxicBadge">
+          <span style="font-size:20px">⚠️</span>
+          <span>PERINGATAN: Tanaman ini mengandung racun atau iritan. Jauhkan dari anak-anak dan hewan peliharaan!</span>
+        </div>
+        <span class="text-[10px] uppercase tracking-widest opacity-60 mb-4 font-bold">Identifikasi Tanaman — Pl@ntNet:</span>
         <div id="resultsContent" class="prose prose-sm font-serif text-[#2b2b2b]">
           <!-- Teks akan dirender disini menggunakan JavaScript -->
         </div>
@@ -317,6 +418,11 @@
         <button id="btnCancel" class="w-full py-3 text-xs text-[#2f4110]/50 active:bg-[#E5E0D6] transition-colors" style="-webkit-tap-highlight-color:rgba(0,0,0,0.08)">Batal</button>
       </div>
     </div>
+  <!-- Offline indicator -->
+  <div id="offlineBar" class="hidden fixed top-0 left-0 right-0 z-50 bg-yellow-600 text-white text-center text-xs font-bold py-2 px-4" style="font-family:sans-serif;">
+    📡 Tidak ada koneksi. Foto akan diidentifikasi otomatis saat online kembali.
+  </div>
+
   </main>
 
   <!-- Side Barcode Decor -->
@@ -336,6 +442,16 @@
 
 
   <!-- Footer Area with Disclaimer -->
+  <!-- History & offline controls -->
+  <div class="relative z-20 w-full max-w-md px-4 mb-4 flex gap-2">
+    <button onclick="openHistory()" class="flex-1 bg-[#F1ECE2]/10 text-[#F1ECE2] border border-[#F1ECE2]/20 py-2 px-3 text-xs font-bold uppercase tracking-wider hover:bg-[#F1ECE2]/20 transition-colors" style="font-family:sans-serif;">
+      📋 Riwayat
+    </button>
+    <div id="offlineQueueBtn" class="hidden flex-1 bg-yellow-600/80 text-white border border-yellow-400/30 py-2 px-3 text-xs font-bold uppercase tracking-wider text-center cursor-pointer" onclick="processOfflineQueue()" style="font-family:sans-serif;">
+      📡 Antrean Offline
+    </div>
+  </div>
+
   <footer class="relative z-20 w-full max-w-md text-center px-6 pb-8 mt-auto flex flex-col gap-3">
     <p class="text-[#F1ECE2]/60 leading-relaxed font-sans border-t border-[#F1ECE2]/20 pt-4" style="font-size: max(10px, 0.625rem);">
       <strong>DISCLAIMER:</strong> Hasil identifikasi ini diproses menggunakan teknologi kecerdasan buatan (AI) dan mungkin tidak sepenuhnya akurat. Harap lakukan identifikasi lebih lanjut dan konsultasikan bersama ahlinya, terutama sebelum memanfaatkan tanaman untuk keperluan konsumsi, terapi, maupun pengobatan medis.
@@ -362,10 +478,16 @@
     const resultsBox = document.getElementById('resultsBox');
     const resultsContent = document.getElementById('resultsContent');
     const resetBtn = document.getElementById('resetBtn');
+    const heroSection = document.getElementById('heroSection');
+    const toxicBadge = document.getElementById('toxicBadge');
+    const offlineBar = document.getElementById('offlineBar');
+    const offlineQueueBtn = document.getElementById('offlineQueueBtn');
+    const cameraGuide = document.getElementById('cameraGuide');
 
     // --- State ---
     let status = 'idle';
-    let collectedImages = []; // max 3
+    let collectedImages = [];
+    let offlineQueue = JSON.parse(localStorage.getItem('ramban_offline_queue') || '[]');
 
     // --- Parallax ---
     window.addEventListener('mousemove', (e) => {
@@ -379,6 +501,21 @@
       rootStyle.setProperty('--scroll-y', window.scrollY);
     }, { passive: true });
 
+    // --- Offline detection ---
+    const checkOnline = () => {
+      const online = navigator.onLine;
+      offlineBar.classList.toggle('hidden', online);
+      if (offlineQueue.length > 0 && !online) {
+        offlineQueueBtn.classList.remove('hidden');
+        offlineQueueBtn.textContent = `📡 Antrean (${offlineQueue.length})`;
+      } else {
+        offlineQueueBtn.classList.add('hidden');
+      }
+    };
+    window.addEventListener('online', () => { checkOnline(); processOfflineQueue(); });
+    window.addEventListener('offline', checkOnline);
+    checkOnline();
+
     // --- UI Update ---
     function updateUI() {
       loadingOverlay.classList.remove('flex');
@@ -386,10 +523,12 @@
       resultsBox.classList.add('hidden');
       idleOverlay.style.display = 'none';
       photoContainer.classList.remove('is-idle');
+      toxicBadge.classList.remove('show');
+
       if (status === 'idle') {
         photoContainer.classList.add('is-idle');
         idleOverlay.style.display = 'flex';
-        document.getElementById('heroSection').style.display = '';
+        heroSection.style.display = '';
         if (collectedImages.length === 0) {
           photoPreview.src = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800&auto=format&fit=crop";
         }
@@ -397,13 +536,12 @@
         loadingOverlay.classList.remove('hidden');
         loadingOverlay.classList.add('flex');
       } else if (status === 'success') {
+        heroSection.style.display = 'none';
         resultsBox.classList.remove('hidden');
-        // Sembunyikan foto besar & hero saat hasil tampil
-        document.getElementById('heroSection').style.display = 'none';
       }
     }
 
-    // --- Slot Elements ---
+    // --- Thumbnail Slots ---
     const thumbEls = [
       document.getElementById('thumb1'),
       document.getElementById('thumb2'),
@@ -444,10 +582,22 @@
       }
     }
 
-    // --- Global: slot tap → open camera ---
+    delBtns.forEach((btn, i) => {
+      btn.addEventListener('click', (e) => { e.stopPropagation(); collectedImages.splice(i, 1); refreshSlots(); });
+    });
+
+    // --- Global slot tap → camera with guide ---
     window.slotTap = function(i) {
-      if (collectedImages[i]) return; // already filled, tap del to remove
-      triggerCamera();
+      if (collectedImages[i]) return;
+      // Show camera guide first, then open camera
+      cameraGuide.classList.add('show');
+      const continueBtn = cameraGuide.querySelector('button');
+      const handler = () => {
+        cameraGuide.classList.remove('show');
+        continueBtn.removeEventListener('click', handler);
+        triggerCamera();
+      };
+      continueBtn.addEventListener('click', handler);
     };
 
     window.removeSlot = function(i) {
@@ -460,18 +610,13 @@
       const old = document.getElementById('_dynCam');
       if (old) old.remove();
       const inp = document.createElement('input');
-      inp.type = 'file';
-      inp.id = '_dynCam';
-      inp.accept = 'image/*';
+      inp.type = 'file'; inp.id = '_dynCam'; inp.accept = 'image/*';
       inp.setAttribute('capture', 'environment');
       inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;';
       document.body.appendChild(inp);
       inp.addEventListener('change', async (e) => {
         const file = e.target.files && e.target.files[0];
-        if (file) {
-          await handleFileAdd(file);
-          refreshSlots();
-        }
+        if (file) { await handleFileAdd(file); refreshSlots(); }
         inp.remove();
       });
       setTimeout(() => inp.click(), 50);
@@ -481,10 +626,7 @@
       const old = document.getElementById('_dynGal');
       if (old) old.remove();
       const inp = document.createElement('input');
-      inp.type = 'file';
-      inp.id = '_dynGal';
-      inp.accept = 'image/*';
-      inp.multiple = true;
+      inp.type = 'file'; inp.id = '_dynGal'; inp.accept = 'image/*'; inp.multiple = true;
       inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;';
       document.body.appendChild(inp);
       inp.addEventListener('change', async (e) => {
@@ -498,26 +640,18 @@
 
     // --- Picker Modal ---
     const openPicker = () => {
-      if (status === 'idle' || status === 'error') {
-        refreshSlots();
-        pickerModal.classList.remove('hidden');
-      }
+      if (status === 'idle' || status === 'error') { refreshSlots(); pickerModal.classList.remove('hidden'); }
     };
     const closePicker = () => pickerModal.classList.add('hidden');
 
     photoContainer.addEventListener('click', openPicker);
     btnCancel.addEventListener('click', closePicker);
     pickerModal.addEventListener('click', (e) => { if (e.target === pickerModal) closePicker(); });
-    btnGallery.addEventListener('click', () => {
-      if (collectedImages.length >= 3) return;
-      triggerGallery();
-    });
+    btnGallery.addEventListener('click', () => { if (collectedImages.length >= 3) return; triggerGallery(); });
     btnIdentify.addEventListener('click', () => { closePicker(); identifyPlant(); });
     resetBtn.addEventListener('click', () => {
-      status = 'idle';
-      collectedImages = [];
-      refreshSlots();
-      updateUI();
+      status = 'idle'; collectedImages = [];
+      refreshSlots(); updateUI();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
@@ -542,19 +676,101 @@
     const handleFileAdd = async (file) => {
       if (!file || collectedImages.length >= 3) return;
       const dataUrl = await new Promise(res => {
-        const r = new FileReader();
-        r.onloadend = () => res(r.result);
-        r.readAsDataURL(file);
+        const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(file);
       });
       const compressed = await compressImage(dataUrl);
       collectedImages.push(compressed);
     };
 
+    // --- History (localStorage) ---
+    const HIST_KEY = 'ramban_history';
+
+    function saveToHistory(result, images) {
+      const history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+      history.unshift({
+        id: Date.now(),
+        date: new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }),
+        commonNames: result.commonNames || '-',
+        scientificName: result.scientificName || '-',
+        toxic: result.toxic || false,
+        confidence: result.confidence || 0,
+        text: result.text,
+        thumb: images[0] // simpan foto pertama sebagai thumbnail
+      });
+      // Simpan maksimal 20 riwayat
+      localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(0, 20)));
+    }
+
+    window.openHistory = function() {
+      const history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+      const list = document.getElementById('historyList');
+      if (history.length === 0) {
+        list.innerHTML = '<p style="color:rgba(241,236,226,0.5);font-family:sans-serif;font-size:13px;text-align:center;padding:24px;">Belum ada riwayat pindaian.</p>';
+      } else {
+        list.innerHTML = history.map(h => `
+          <div class="hist-item ${h.toxic ? 'toxic' : ''}" onclick="loadFromHistory(${h.id})">
+            <img class="hist-thumb" src="${h.thumb}" onerror="this.style.display='none'" />
+            <div class="hist-info">
+              <div class="hist-name">${h.toxic ? '⚠️ ' : ''}${h.commonNames}</div>
+              <div class="hist-latin">${h.scientificName}</div>
+              <div class="hist-date">${h.date} · ${h.confidence}% keyakinan</div>
+            </div>
+          </div>`).join('');
+      }
+      document.getElementById('historyPanel').classList.add('show');
+    };
+
+    window.closeHistory = function() {
+      document.getElementById('historyPanel').classList.remove('show');
+    };
+
+    window.clearHistory = function() {
+      if (confirm('Hapus semua riwayat?')) {
+        localStorage.removeItem(HIST_KEY);
+        openHistory();
+      }
+    };
+
+    window.loadFromHistory = function(id) {
+      const history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+      const item = history.find(h => h.id === id);
+      if (!item) return;
+      closeHistory();
+      renderFormattedText(item.text, item.toxic, [item.thumb]);
+      status = 'success';
+      updateUI();
+      if (item.toxic) toxicBadge.classList.add('show');
+      setTimeout(() => resultsBox.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    };
+
+    // --- Offline Queue ---
+    window.processOfflineQueue = async function() {
+      if (!navigator.onLine || offlineQueue.length === 0) return;
+      const item = offlineQueue[0];
+      offlineQueue = offlineQueue.slice(1);
+      localStorage.setItem('ramban_offline_queue', JSON.stringify(offlineQueue));
+      collectedImages = item.images;
+      refreshSlots();
+      await identifyPlant();
+      checkOnline();
+    };
+
     // --- Identify ---
     const identifyPlant = async () => {
       if (collectedImages.length === 0) return;
+
+      // Offline? Queue it
+      if (!navigator.onLine) {
+        offlineQueue.push({ images: collectedImages, queuedAt: new Date().toISOString() });
+        localStorage.setItem('ramban_offline_queue', JSON.stringify(offlineQueue));
+        checkOnline();
+        alert('Tidak ada koneksi internet. Foto disimpan dan akan diidentifikasi otomatis saat online kembali.');
+        return;
+      }
+
       status = 'loading';
       updateUI();
+
       try {
         const images = collectedImages.map(b64 => ({
           imageData: b64.split(',')[1],
@@ -568,10 +784,19 @@
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
         if (!result.text) throw new Error("Tidak ada respon dari API.");
-        renderFormattedText(result.text, collectedImages);
+
+        // Show toxicity badge
+        if (result.toxic) toxicBadge.classList.add('show');
+
+        // Save to history
+        saveToHistory(result, collectedImages);
+
+        renderFormattedText(result.text, result.toxic, collectedImages);
         status = 'success';
         updateUI();
+        if (result.toxic) toxicBadge.classList.add('show');
         setTimeout(() => resultsBox.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+
       } catch (error) {
         console.error("Error:", error);
         alert("Gagal menganalisis gambar.\nError: " + error.message);
@@ -581,9 +806,13 @@
     };
 
     // --- Render ---
-    const renderFormattedText = (text, imgs) => {
+    const renderFormattedText = (text, toxic, imgs) => {
+      // Remove internal tag
+      const cleanText = text.replace('[PERINGATAN_BERACUN]\n', '').replace('[PERINGATAN_BERACUN]', '');
+
       let html = '';
-      // Show all collected photos in results
+
+      // Show collected photos
       if (imgs && imgs.length > 0) {
         html += '<div style="display:flex;gap:6px;margin-bottom:14px;">';
         imgs.forEach(src => {
@@ -591,7 +820,8 @@
         });
         html += '</div>';
       }
-      const boldedText = text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#2f4110]">$1</strong>');
+
+      const boldedText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#2f4110]">$1</strong>');
       boldedText.split('\n').forEach(line => {
         if (line.trim()) html += `<span class="block mb-3 leading-relaxed">${line}</span>`;
       });
@@ -600,6 +830,7 @@
 
     // --- Init ---
     updateUI();
+    checkOnline();
 
   </script>
 </body>
