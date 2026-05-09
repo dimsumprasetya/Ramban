@@ -179,7 +179,7 @@
 
     /* Camera overlay guide */
     #cameraGuide {
-      position: fixed; inset: 0; z-index: 60;
+      position: fixed; inset: 0; z-index: 9999;
       background: rgba(0,0,0,0.75);
       display: none; flex-direction: column;
       align-items: center; justify-content: center;
@@ -230,7 +230,7 @@
 
     /* History panel */
     #historyPanel {
-      display: none; position: fixed; inset: 0; z-index: 55;
+      display: none; position: fixed; inset: 0; z-index: 9998;
       background: #3b4d19; overflow-y: auto; padding: 20px 16px;
     }
     #historyPanel.show { display: block; }
@@ -307,7 +307,7 @@
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             <span class="mt-4 font-bold tracking-widest text-[#2f4110] text-[10px] uppercase text-center px-4">
-              Menganalisis Jurnal...
+              Menganalisis Tanaman...
             </span>
           </div>
 
@@ -361,7 +361,7 @@
           <span style="font-size:20px">⚠️</span>
           <span>PERINGATAN: Tanaman ini mengandung racun atau iritan. Jauhkan dari anak-anak dan hewan peliharaan!</span>
         </div>
-        <span class="text-[10px] uppercase tracking-widest opacity-60 mb-4 font-bold">Identifikasi Tanaman:</span>
+        <span class="text-[10px] uppercase tracking-widest opacity-60 mb-4 font-bold">Identifikasi Tanaman — Pl@ntNet:</span>
         <div id="resultsContent" class="prose prose-sm font-serif text-[#2b2b2b]">
           <!-- Teks akan dirender disini menggunakan JavaScript -->
         </div>
@@ -369,7 +369,7 @@
     </div>
 
     <!-- Camera / Gallery Picker Modal (centered) -->
-    <div id="pickerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-4" style="background: rgba(0,0,0,0.6)">
+    <div id="pickerModal" class="hidden fixed inset-0 flex items-center justify-center px-4" style="z-index:9990;background:rgba(0,0,0,0.6)" style="background: rgba(0,0,0,0.6)">
       <div class="w-full max-w-sm bg-[#F1ECE2] shadow-2xl overflow-hidden" style="border-radius: 6px;">
         <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#2f4110]/60 pt-5 pb-3 px-6 border-b border-[#D6D1C6]">Pilih Sumber Gambar</p>
 
@@ -586,18 +586,24 @@
       btn.addEventListener('click', (e) => { e.stopPropagation(); collectedImages.splice(i, 1); refreshSlots(); });
     });
 
-    // --- Global slot tap → camera with guide ---
+    // --- Global slot tap → tutup modal → tampil guide → buka kamera ---
     window.slotTap = function(i) {
       if (collectedImages[i]) return;
-      // Show camera guide first, then open camera
-      cameraGuide.classList.add('show');
-      const continueBtn = cameraGuide.querySelector('button');
-      const handler = () => {
-        cameraGuide.classList.remove('show');
-        continueBtn.removeEventListener('click', handler);
-        triggerCamera();
-      };
-      continueBtn.addEventListener('click', handler);
+      // 1. Tutup modal picker dulu
+      closePicker();
+      // 2. Tunggu animasi close, baru tampil guide
+      setTimeout(() => {
+        cameraGuide.classList.add('show');
+        // Pastikan tidak ada handler ganda
+        const continueBtn = cameraGuide.querySelector('button');
+        const newBtn = continueBtn.cloneNode(true);
+        continueBtn.parentNode.replaceChild(newBtn, continueBtn);
+        newBtn.addEventListener('click', () => {
+          cameraGuide.classList.remove('show');
+          // Tunggu guide hilang sebelum buka kamera
+          setTimeout(() => triggerCamera(), 100);
+        });
+      }, 150);
     };
 
     window.removeSlot = function(i) {
@@ -616,9 +622,25 @@
       document.body.appendChild(inp);
       inp.addEventListener('change', async (e) => {
         const file = e.target.files && e.target.files[0];
-        if (file) { await handleFileAdd(file); refreshSlots(); }
+        if (file) {
+          await handleFileAdd(file);
+          refreshSlots();
+        }
         inp.remove();
+        window.removeEventListener('focus', onFocus);
+        // Buka modal lagi jika masih ada slot kosong
+        if (collectedImages.length < 3) {
+          setTimeout(() => openPicker(), 200);
+        }
       });
+      // Cancel handler — user tekan back tanpa pilih foto
+      const onFocus = () => {
+        setTimeout(() => {
+          if (inp.parentNode) { inp.remove(); openPicker(); }
+          window.removeEventListener('focus', onFocus);
+        }, 500);
+      };
+      window.addEventListener('focus', onFocus);
       setTimeout(() => inp.click(), 50);
     }
 
@@ -632,9 +654,21 @@
       inp.addEventListener('change', async (e) => {
         const files = Array.from(e.target.files || []).slice(0, 3 - collectedImages.length);
         for (const f of files) await handleFileAdd(f);
-        refreshSlots();
         inp.remove();
+        refreshSlots();
+        // Buka modal lagi jika masih ada slot kosong
+        if (collectedImages.length < 3) {
+          setTimeout(() => openPicker(), 200);
+        }
       });
+      // Cancel handler
+      const onFocus = () => {
+        setTimeout(() => {
+          if (inp.parentNode) { inp.remove(); openPicker(); }
+          window.removeEventListener('focus', onFocus);
+        }, 500);
+      };
+      window.addEventListener('focus', onFocus);
       setTimeout(() => inp.click(), 50);
     }
 
