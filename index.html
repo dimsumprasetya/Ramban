@@ -591,17 +591,7 @@
       if (collectedImages[i]) return;
       // 1. Tutup modal picker dulu
       closePicker();
-      // 2. Tunggu animasi close, baru tampil guide
-      setTimeout(() => {
-        cameraGuide.classList.add('show');
-        // Pastikan tidak ada handler ganda
-        const continueBtn = cameraGuide.querySelector('button');
-        const newBtn = continueBtn.cloneNode(true);
-        continueBtn.parentNode.replaceChild(newBtn, continueBtn);
-        newBtn.addEventListener('click', () => {
-          cameraGuide.classList.remove('show');
-          // Tunggu guide hilang sebelum buka kamera
-          setTimeout(() => triggerCamera(), 100);
+
         });
       }, 150);
     };
