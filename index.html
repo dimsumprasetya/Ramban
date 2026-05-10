@@ -937,79 +937,120 @@
       document.getElementById('disclaimerPopup').classList.add('hidden');
     }
 
-    // ── CHAT BOTANI (PlantNet knowledge + Wikipedia) ──
-    let chatHistory = [
-      { role: 'system', text: 'Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning. Jawab pertanyaan tentang tanaman dalam bahasa Indonesia dengan singkat, informatif, dan ramah. Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, dan fakta botani. Jika pertanyaan bukan tentang tanaman, arahkan kembali ke topik botani.' }
-    ];
-    let chatOpen = false;
+    // ── CHAT BOTANI — robust addEventListener (no onclick attr) ──
+    (function() {
+      let chatOpen = false;
+      let chatHistory = [];
+      let teaserShown = false;
 
-    function toggleChat() {
-      chatOpen = !chatOpen;
-      const panel = document.getElementById('chatPanel');
-      const fab = document.getElementById('chatFab');
-      panel.classList.toggle('open', chatOpen);
-      fab.textContent = chatOpen ? '✕' : '🌿';
-      if (chatOpen) {
-        document.getElementById('chatInput').focus();
-        scrollChatBottom();
-      }
-    }
+      const fab       = document.getElementById('chatFab');
+      const panel     = document.getElementById('chatPanel');
+      const closeBtn  = document.getElementById('chatClose');
+      const sendBtn   = document.getElementById('chatSend');
+      const inputEl   = document.getElementById('chatInputField');
+      const msgsEl    = document.getElementById('chatMsgs');
+      const typingEl  = document.getElementById('chatTyping');
+      const quickEl   = document.getElementById('quickBtns');
+      const teaser    = document.getElementById('chatTeaser');
+      const teaserX   = document.getElementById('teaserClose');
 
-    function scrollChatBottom() {
-      const msgs = document.getElementById('chatMsgs');
-      setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
-    }
-
-    function addBubble(text, isUser) {
-      const msgs = document.getElementById('chatMsgs');
-      const div = document.createElement('div');
-      div.className = 'chat-bubble ' + (isUser ? 'user' : 'bot');
-      div.textContent = text;
-      msgs.appendChild(div);
-      scrollChatBottom();
-      return div;
-    }
-
-    function sendQuick(q) {
-      document.getElementById('quickBtns').style.display = 'none';
-      document.getElementById('chatInput').value = q;
-      sendChat();
-    }
-
-    async function sendChat() {
-      const input = document.getElementById('chatInput');
-      const q = input.value.trim();
-      if (!q) return;
-      input.value = '';
-
-      addBubble(q, true);
-      chatHistory.push({ role: 'user', text: q });
-
-      // Show typing
-      const typing = document.getElementById('chatTyping');
-      typing.classList.add('show');
-      scrollChatBottom();
-
-      try {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: q, history: chatHistory.slice(-8) })
-        });
-        const data = await response.json();
-        typing.classList.remove('show');
-
-        if (data.reply) {
-          addBubble(data.reply, false);
-          chatHistory.push({ role: 'assistant', text: data.reply });
-        } else {
-          addBubble('Maaf, terjadi gangguan. Coba lagi ya! 🌿', false);
+      // Tampilkan teaser setelah 3 detik (hanya sekali)
+      setTimeout(() => {
+        if (!localStorage.getItem('ramban_chat_used') && teaser) {
+          teaser.style.display = 'flex';
+          teaserShown = true;
+          // Auto-hide setelah 8 detik
+          setTimeout(() => { if (teaser) teaser.style.display = 'none'; }, 8000);
         }
-      } catch {
-        typing.classList.remove('show');
-        addBubble('Tidak ada koneksi internet. Pastikan Anda online dan coba lagi.', false);
+      }, 3000);
+
+      function hideTeaser() {
+        if (teaser) teaser.style.display = 'none';
       }
-    }
+      if (teaser) teaser.addEventListener('click', () => { hideTeaser(); toggleChat(); });
+      if (teaserX) teaserX.addEventListener('click', (e) => { e.stopPropagation(); hideTeaser(); });
+
+      function toggleChat() {
+        hideTeaser();
+        chatOpen = !chatOpen;
+        // Directly set style — more reliable than classList on some Android WebViews
+        panel.style.display = chatOpen ? 'flex' : 'none';
+        panel.style.flexDirection = 'column';
+        fab.textContent = chatOpen ? '✕' : '🌿';
+        fab.style.fontSize = chatOpen ? '18px' : '22px';
+        if (chatOpen) {
+          localStorage.setItem('ramban_chat_used', '1');
+          if (inputEl) setTimeout(() => inputEl.focus(), 200);
+          scrollBottom();
+        }
+      }
+
+      function scrollBottom() {
+        if (msgsEl) setTimeout(() => { msgsEl.scrollTop = msgsEl.scrollHeight; }, 60);
+      }
+
+      function addBubble(text, isUser) {
+        if (!msgsEl) return;
+        const div = document.createElement('div');
+        div.className = 'chat-bubble ' + (isUser ? 'user' : 'bot');
+        div.textContent = text;
+        msgsEl.appendChild(div);
+        scrollBottom();
+      }
+
+      async function sendChat() {
+        if (!inputEl) return;
+        const q = inputEl.value.trim();
+        if (!q) return;
+        inputEl.value = '';
+        if (quickEl) quickEl.style.display = 'none';
+
+        addBubble(q, true);
+        chatHistory.push({ role: 'user', text: q });
+        if (typingEl) typingEl.style.display = 'block';
+        scrollBottom();
+
+        try {
+          const resp = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: q, history: chatHistory.slice(-8) })
+          });
+          const data = await resp.json();
+          if (typingEl) typingEl.style.display = 'none';
+          const reply = data.reply || 'Maaf, tidak ada respons. Coba lagi ya! 🌿';
+          addBubble(reply, false);
+          chatHistory.push({ role: 'assistant', text: reply });
+        } catch {
+          if (typingEl) typingEl.style.display = 'none';
+          addBubble('Tidak ada koneksi internet. Coba lagi saat online. 🌿', false);
+        }
+      }
+
+      // Wire up events
+      if (fab) fab.addEventListener('click', toggleChat);
+      if (closeBtn) closeBtn.addEventListener('click', toggleChat);
+      if (sendBtn) sendBtn.addEventListener('click', sendChat);
+      if (inputEl) inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+
+      // Quick buttons — use event delegation on quickEl
+      if (quickEl) {
+        quickEl.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-q]');
+          if (!btn) return;
+          quickEl.style.display = 'none';
+          inputEl.value = btn.dataset.q || btn.textContent.replace(/^[^\s]+\s/, '');
+          sendChat();
+        });
+      }
+
+      // Expose globally for quick buttons data-q
+      window._sendQuick = function(q) {
+        if (quickEl) quickEl.style.display = 'none';
+        if (inputEl) inputEl.value = q;
+        sendChat();
+      };
+    })();
     checkOnline();
 
   </script>
@@ -1030,7 +1071,11 @@
   </div>
 
   <!-- ── CHAT BOTANI FLOATING BUTTON ── -->
-  <button id="chatFab" onclick="toggleChat()" title="Tanya Ahli Botani AI">🌿</button>
+  <div id="chatTeaser" style="position:fixed;bottom:86px;right:16px;z-index:8999;background:#2f4110;color:#F1ECE2;font-family:sans-serif;font-size:11px;font-weight:600;padding:8px 14px 8px 10px;border-radius:20px 20px 4px 20px;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;max-width:200px;line-height:1.4;cursor:pointer;animation:fadeIn .4s ease;">
+    🌿 <span>Punya pertanyaan soal tanaman? Tanya saya!</span>
+    <span id="teaserClose" style="margin-left:4px;opacity:.6;font-size:14px">×</span>
+  </div>
+  <button id="chatFab" title="Tanya Ahli Botani AI">🌿</button>
 
   <!-- ── CHAT PANEL ── -->
   <div id="chatPanel">
@@ -1040,22 +1085,21 @@
         <div class="chat-hdr-name">Ahli Botani AI</div>
         <div class="chat-hdr-sub">Didukung Pl@ntNet × Wikipedia</div>
       </div>
-      <button class="chat-close" onclick="toggleChat()">✕</button>
+      <button class="chat-close" id="chatClose">✕</button>
     </div>
     <div class="chat-msgs" id="chatMsgs">
       <div class="chat-bubble bot">Halo! Saya asisten botani Ramban. Ada yang ingin Anda tanyakan tentang tanaman? 🌱</div>
     </div>
     <div class="chat-typing" id="chatTyping">•••</div>
     <div class="chat-quickbtns" id="quickBtns">
-      <div class="chat-qbtn" onclick="sendQuick('Apa tanaman yang cocok untuk dalam ruangan?')">🏠 Tanaman indoor</div>
-      <div class="chat-qbtn" onclick="sendQuick('Tanaman apa yang beracun untuk kucing?')">🐱 Berbahaya untuk kucing</div>
-      <div class="chat-qbtn" onclick="sendQuick('Bagaimana cara merawat tanaman sukulen?')">🌵 Cara rawat sukulen</div>
-      <div class="chat-qbtn" onclick="sendQuick('Tanaman herbal apa yang mudah ditanam di rumah?')">🌿 Herbal rumahan</div>
+      <div class="chat-qbtn" data-q="Apa tanaman yang cocok untuk dalam ruangan?">🏠 Tanaman indoor</div>
+      <div class="chat-qbtn" data-q="Tanaman apa yang beracun untuk kucing?">🐱 Berbahaya untuk kucing</div>
+      <div class="chat-qbtn" data-q="Bagaimana cara merawat tanaman sukulen?">🌵 Cara rawat sukulen</div>
+      <div class="chat-qbtn" data-q="Tanaman herbal apa yang mudah ditanam di rumah?">🌿 Herbal rumahan</div>
     </div>
     <div class="chat-input-row">
-      <input class="chat-input" id="chatInput" type="text" placeholder="Tanya tentang tanaman..." 
-        onkeydown="if(event.key==='Enter')sendChat()" maxlength="300" />
-      <button class="chat-send" onclick="sendChat()">➤</button>
+      <input class="chat-input" id="chatInputField" type="text" placeholder="Tanya tentang tanaman..." maxlength="300" />
+      <button class="chat-send" id="chatSend">➤</button>
     </div>
   </div>
 
