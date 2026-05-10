@@ -1043,28 +1043,51 @@
       if (typing) typing.style.display = 'block';
       if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
-      fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: q, history: rambanChatHistory.slice(-8) })
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(data){
+      // Wikipedia search — no API key needed, always free
+      var searchQ = encodeURIComponent(q.replace(/ /g,'_'));
+      var wikiUrl = 'https://id.wikipedia.org/api/rest_v1/page/summary/' + searchQ;
+
+      function addReply(text) {
         if (typing) typing.style.display = 'none';
-        var reply = data.reply || 'Maaf, tidak ada respons. Coba lagi ya! 🌿';
         var bb = document.createElement('div');
         bb.className = 'chat-bubble bot';
-        bb.textContent = reply;
+        bb.textContent = text;
         if (msgs) { msgs.appendChild(bb); msgs.scrollTop = msgs.scrollHeight; }
-        rambanChatHistory.push({ role: 'assistant', text: reply });
-      })
-      .catch(function(){
-        if (typing) typing.style.display = 'none';
-        var eb = document.createElement('div');
-        eb.className = 'chat-bubble bot';
-        eb.textContent = 'Tidak ada koneksi internet. Coba lagi saat online. 🌿';
-        if (msgs) { msgs.appendChild(eb); msgs.scrollTop = msgs.scrollHeight; }
-      });
+        rambanChatHistory.push({ role: 'assistant', text: text });
+      }
+
+      function buildReply(data) {
+        if (!data || !data.extract || data.type === 'disambiguation') return null;
+        var extract = data.extract.replace(/\n/g,' ')
+          .split(/(?<=[.!?])\s+/).slice(0,4).join(' ');
+        var title = data.title || '';
+        var url = data.content_urls && data.content_urls.desktop
+          ? '\n\n📖 Baca selengkapnya: ' + data.content_urls.desktop.page : '';
+        return '🌿 ' + title + '\n\n' + extract + url;
+      }
+
+      // Try Wikipedia ID first, fallback to EN
+      fetch(wikiUrl, { headers: { 'User-Agent': 'RambanApp/1.0' } })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(data){
+          var reply = data ? buildReply(data) : null;
+          if (reply) { addReply(reply); return; }
+          // Fallback: Wikipedia EN
+          return fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + searchQ,
+            { headers: { 'User-Agent': 'RambanApp/1.0' } })
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(d){
+              var r2 = d ? buildReply(d) : null;
+              if (r2) {
+                addReply(r2 + '\n\n(Info dalam Bahasa Inggris — artikel Indonesia belum tersedia)');
+              } else {
+                addReply('Maaf, saya tidak menemukan informasi tentang "' + q + '" di database botani. Coba gunakan nama ilmiah atau nama umum tanaman. 🌿');
+              }
+            });
+        })
+        .catch(function(){
+          addReply('Tidak ada koneksi internet. Pastikan Anda online dan coba lagi. 🌿');
+        });
     };
 
     window.rambanSendQuick = function(q) {
