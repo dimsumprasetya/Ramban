@@ -1066,25 +1066,36 @@
       });
       messages.push({ role: 'user', content: q });
 
-      fetch('https://api.cobuddy.com/v1/chat', {
+      fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer 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',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'Ramban Botani App'
         },
         body: JSON.stringify({
-          messages: messages
+          model: 'baidu/cobuddy:free',
+          messages: messages,
+          max_tokens: 500,
+          temperature: 0.7
         })
       })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var reply = data.response || data.choices && data.choices[0] && data.choices[0].message
-          ? (data.response || data.choices[0].message.content)
-          : 'Maaf, tidak ada respons. Coba lagi ya! 🌿';
-        addReply(reply);
+      .then(function(r) {
+        if (!r.ok) {
+          return r.json().then(function(errData) {
+            throw new Error('API Error ' + r.status + ': ' + (errData.error && errData.error.message || JSON.stringify(errData)));
+          });
+        }
+        return r.json();
       })
-      .catch(function() {
-        addReply('Tidak ada koneksi. Pastikan Anda online dan coba lagi. 🌿');
+      .then(function(data) {
+        var reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+        addReply(reply || 'Maaf, tidak ada respons. Coba lagi ya! 🌿');
+      })
+      .catch(function(err) {
+        console.error('Chat error:', err);
+        addReply('Error: ' + (err.message || 'Tidak dapat terhubung ke server. Pastikan online dan coba lagi.') + ' 🌿');
       });
     };
 
