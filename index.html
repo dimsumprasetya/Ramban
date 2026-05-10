@@ -1027,54 +1027,79 @@
       var msgs  = document.getElementById('chatMsgs');
       var typing = document.getElementById('chatTyping');
       var quickEl = document.getElementById('quickBtns');
+      
       if (!input) return;
       var q = input.value.trim();
       if (!q) return;
       input.value = '';
       if (quickEl) quickEl.style.display = 'none';
 
-      // Add user bubble
+      // Tambah chat user ke layar
       var ub = document.createElement('div');
       ub.className = 'chat-bubble user';
       ub.textContent = q;
       if (msgs) msgs.appendChild(ub);
 
+      // Simpan ke history internal
       rambanChatHistory.push({ role: 'user', text: q });
+      
       if (typing) typing.style.display = 'block';
       if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
-      fetch('http://localhost:3000/api/chat', {
+      // ── KONEKSI LANGSUNG KE GEMINI DARI FRONTEND ──
+      var geminiKey = "AIzaSyA5mMGixm8fUyg-g1nXEE0adb3bzqkbRW8"; 
+      var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + geminiKey;
+
+      // Format history Ramban agar sesuai dengan format Gemini
+      var formattedContents = [];
+      rambanChatHistory.slice(-8).forEach(function(h) {
+        formattedContents.push({
+          role: h.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: h.text }]
+        });
+      });
+
+      var payload = {
+        systemInstruction: { parts: [{ text: "Kamu adalah asisten botani AI bernama Ramban. Jawab pertanyaan seputar tanaman dengan singkat, ramah, dan gunakan bahasa Indonesia." }] },
+        contents: formattedContents,
+        generationConfig: { temperature: 0.6, maxOutputTokens: 400 }
+      };
+
+      fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: q, history: rambanChatHistory.slice(-8) })
+        body: JSON.stringify(payload)
       })
-      .then(function(r){ return r.json(); })
-      .then(function(data){
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
         if (typing) typing.style.display = 'none';
-        var reply = data.reply || 'Maaf, tidak ada respons. Coba lagi ya! 🌿';
+        
+        // Cek jika API Gemini menolak request atau limit habis
+        if (data.error) {
+            throw new Error(data.error.message);
+        }
+
+        // Parsing balasan Gemini
+        var reply = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] 
+            ? data.candidates[0].content.parts[0].text 
+            : 'Maaf, saya tidak mengerti. Coba tanyakan hal lain ya! 🌿';
+        
         var bb = document.createElement('div');
         bb.className = 'chat-bubble bot';
         bb.textContent = reply;
         if (msgs) { msgs.appendChild(bb); msgs.scrollTop = msgs.scrollHeight; }
+        
         rambanChatHistory.push({ role: 'assistant', text: reply });
       })
-      .catch(function(){
+      .catch(function(err){
+        console.error("Error dari API:", err);
         if (typing) typing.style.display = 'none';
         var eb = document.createElement('div');
         eb.className = 'chat-bubble bot';
-        eb.textContent = 'Tidak ada koneksi internet. Coba lagi saat online. 🌿';
+        eb.textContent = 'Terjadi kesalahan jaringan atau API. Cek console untuk detailnya. 🌿';
         if (msgs) { msgs.appendChild(eb); msgs.scrollTop = msgs.scrollHeight; }
       });
     };
-
-    window.rambanSendQuick = function(q) {
-      var quickEl = document.getElementById('quickBtns');
-      var input = document.getElementById('chatInputField');
-      if (quickEl) quickEl.style.display = 'none';
-      if (input) input.value = q;
-      window.rambanSendChat();
-    };
-
     // Wire send button & enter key
     var sendBtn = document.getElementById('chatSend');
     var inputEl = document.getElementById('chatInputField');
