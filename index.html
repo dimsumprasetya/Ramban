@@ -1022,70 +1022,51 @@
       }
     };
 
-    import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+    window.rambanSendChat = function() {
+      var input = document.getElementById('chatInputField');
+      var msgs  = document.getElementById('chatMsgs');
+      var typing = document.getElementById('chatTyping');
+      var quickEl = document.getElementById('quickBtns');
+      if (!input) return;
+      var q = input.value.trim();
+      if (!q) return;
+      input.value = '';
+      if (quickEl) quickEl.style.display = 'none';
 
-// Load variabel dari file .env
-dotenv.config();
+      // Add user bubble
+      var ub = document.createElement('div');
+      ub.className = 'chat-bubble user';
+      ub.textContent = q;
+      if (msgs) msgs.appendChild(ub);
 
-const app = express();
-app.use(cors()); // Izinkan frontend HTML mengakses backend ini
-app.use(express.json());
+      rambanChatHistory.push({ role: 'user', text: q });
+      if (typing) typing.style.display = 'block';
+      if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
-app.post('/api/chat', async (req, res) => {
-  try {
-    const { message, history = [] } = req.body;
-
-    // Build messages format untuk Gemini
-    const formattedContents = [];
-    history.forEach(h => {
-      formattedContents.push({ 
-        role: h.role === 'assistant' ? 'model' : 'user', 
-        parts: [{ text: h.text }] 
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: q, history: rambanChatHistory.slice(-8) })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (typing) typing.style.display = 'none';
+        var reply = data.reply || 'Maaf, tidak ada respons. Coba lagi ya! 🌿';
+        var bb = document.createElement('div');
+        bb.className = 'chat-bubble bot';
+        bb.textContent = reply;
+        if (msgs) { msgs.appendChild(bb); msgs.scrollTop = msgs.scrollHeight; }
+        rambanChatHistory.push({ role: 'assistant', text: reply });
+      })
+      .catch(function(){
+        if (typing) typing.style.display = 'none';
+        var eb = document.createElement('div');
+        eb.className = 'chat-bubble bot';
+        eb.textContent = 'Tidak ada koneksi internet. Coba lagi saat online. 🌿';
+        if (msgs) { msgs.appendChild(eb); msgs.scrollTop = msgs.scrollHeight; }
       });
-    });
-
-    // Panggil rahasia API Key dari server
-    const geminiKey = process.env.GEMINI_API_KEY; 
-    const modelName = "gemini-1.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
-
-    const payload = {
-      systemInstruction: { parts: [{ text: "Kamu adalah asisten botani AI bernama Ramban. Jawab singkat, ramah, pakai bahasa Indonesia." }] },
-      contents: formattedContents,
-      generationConfig: { temperature: 0.6, maxOutputTokens: 400 }
     };
 
-    // Backend yang menghubungi Google
-    const geminiRes = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const geminiData = await geminiRes.json();
-
-    if (!geminiRes.ok) {
-        return res.status(500).json({ error: geminiData.error?.message || "Gagal menghubungi Gemini" });
-    }
-
-    const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    // Kembalikan hasil ke Frontend
-    res.json({ reply: reply });
-
-  } catch (err) {
-    console.error("Server Error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Backend Server berjalan aman di port ${PORT}`);
-});
-    
     window.rambanSendQuick = function(q) {
       var quickEl = document.getElementById('quickBtns');
       var input = document.getElementById('chatInputField');
