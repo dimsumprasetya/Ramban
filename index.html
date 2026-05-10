@@ -986,14 +986,14 @@
     (function() {
       var popup = document.getElementById('disclaimerPopup');
       if (!popup) return;
-      if (localStorage.getItem('ramban_disc_agreed')) {
+      if (localStorage.getItem('ramban_disc_v2')) {
         popup.style.display = 'none';
       }
       // else: CSS display:flex already shows it
     })();
 
     window.agreeDisclaimer = function() {
-      localStorage.setItem('ramban_disc_agreed', '1');
+      localStorage.setItem('ramban_disc_v2', '1');
       var popup = document.getElementById('disclaimerPopup');
       if (popup) popup.style.display = 'none';
     };
@@ -1066,30 +1066,25 @@
       });
       messages.push({ role: 'user', content: q });
 
-      fetch('https://openrouter.ai/api/v1/chat/completions', {
+      fetch('https://api.cobuddy.com/v1/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': 'Bearer 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',
-          'HTTP-Referer': 'https://ramban.vercel.app',
-          'X-Title': 'Ramban Botani App'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'baidu/cobuddy:free',
-          messages: messages,
-          max_tokens: 500,
-          temperature: 0.6
+          messages: messages
         })
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        var reply = data.choices && data.choices[0] && data.choices[0].message
-          ? data.choices[0].message.content
-          : (data.error ? 'Error: ' + data.error.message : 'Maaf, tidak ada respons. Coba lagi ya! 🌿');
+        var reply = data.response || data.choices && data.choices[0] && data.choices[0].message
+          ? (data.response || data.choices[0].message.content)
+          : 'Maaf, tidak ada respons. Coba lagi ya! 🌿';
         addReply(reply);
       })
-      .catch(function(err) {
-        addReply('Tidak ada koneksi internet. Pastikan Anda online dan coba lagi. 🌿');
+      .catch(function() {
+        addReply('Tidak ada koneksi. Pastikan Anda online dan coba lagi. 🌿');
       });
     };
 
