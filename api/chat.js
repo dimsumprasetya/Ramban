@@ -38,46 +38,26 @@ Jika ada informasi dari Wikipedia berikut, gunakan sebagai referensi tambahan: "
 Jika pertanyaan bukan tentang tanaman atau alam, jawab: "Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman? 🌿"
 Akhiri jawaban dengan emoji tanaman yang relevan.`;
 
-   export const chatWithGemini = async (req, res) => {
-  try {
-    // Asumsi variabel ini didapat dari request
-    const { message, history = [], systemPrompt, wikiContext } = req.body;
-
-    // ── 1. Build messages untuk Gemini ──
+    // ── Build messages untuk Gemini ──
     const messages = [];
-    
     // Tambah history (skip system message)
     history.filter(h => h.role !== 'system').forEach(h => {
-      messages.push({ 
-        role: h.role === 'assistant' ? 'model' : 'user', 
-        parts: [{ text: h.text }] 
-      });
+      messages.push({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.text }] });
     });
-
     // Pastikan pesan terakhir adalah user
     if (!messages.length || messages[messages.length - 1].role !== 'user') {
       messages.push({ role: 'user', parts: [{ text: message }] });
     }
 
-    // ── 2. Setup API Key & URL (Versi Hardcode untuk Testing) ──
-    const geminiKey = "AIzaSyA5mMGixm8fUyg-g1nXEE0adb3bzqkbRW8"; 
-    
-    // Perbaikan: Menghapus tab yang nyelip di URL agar endpoint valid
-    const modelName = "gemini-1.5-flash"; 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
+    const geminiKey = "AIzaSyDwBzngUA78CpU_LktQStspVNrD_JTLnTQ";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
 
-    // ── 3. Siapkan Payload ──
     const payload = {
-      // Menggunakan camelCase sesuai dokumentasi API
-      systemInstruction: { parts: [{ text: systemPrompt }] },
+      system_instruction: { parts: [{ text: systemPrompt }] },
       contents: messages,
-      generationConfig: { 
-        temperature: 0.6, 
-        maxOutputTokens: 400 
-      }
+      generationConfig: { temperature: 0.6, maxOutputTokens: 400 }
     };
 
-    // ── 4. Eksekusi Request ──
     const geminiRes = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -86,28 +66,20 @@ Akhiri jawaban dengan emoji tanaman yang relevan.`;
 
     const geminiData = await geminiRes.json();
 
-    // ── 5. Error Handling & Fallback ──
     if (!geminiRes.ok) {
-      console.error("Gemini API Error:", geminiData); // Log error di console untuk bantu debugging
-      
-      // Fallback ke Wikipedia jika AI error
+      // Gemini error → fallback Wikipedia answer
       if (wikiContext) {
         return res.status(200).json({
           reply: `Berdasarkan Wikipedia: ${wikiContext} 🌿\n\n(Catatan: Layanan AI sedang tidak tersedia, ini adalah informasi dasar dari Wikipedia.)`
         });
       }
-      return res.status(200).json({ 
-        reply: 'Maaf, layanan AI sedang tidak tersedia. Silakan coba lagi nanti. 🌿' 
-      });
+      return res.status(200).json({ reply: 'Maaf, layanan AI sedang tidak tersedia. Silakan coba lagi nanti. 🌿' });
     }
 
-    // ── 6. Parsing Respons ──
     const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Maaf, tidak ada respons. Coba lagi ya! 🌿';
-    
     return res.status(200).json({ reply });
 
   } catch (err) {
-    console.error("Server Error:", err);
     return res.status(500).json({ error: err.message });
   }
-};
+}
