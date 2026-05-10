@@ -50,7 +50,7 @@ Akhiri jawaban dengan emoji tanaman yang relevan.`;
     }
 
     const geminiKey = "AIzaSyBPdZ1VJqb_yW9RTLm6bqgopMNhv5zv1xQ";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${geminiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/	gemini-2.5-flash-lite:generateContent?key=${geminiKey}`;
 
     const payload = {
       system_instruction: { parts: [{ text: systemPrompt }] },
