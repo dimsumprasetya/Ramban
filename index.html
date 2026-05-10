@@ -221,8 +221,7 @@
       display: flex; align-items: center; justify-content: center;
       padding: 24px; font-family: sans-serif;
     }
-    #disclaimerPopup.hidden { display: none; }
-    .disc-box {
+        .disc-box {
       background: #F1ECE2; border-top: 6px solid #2f4110;
       border-radius: 4px; padding: 28px 24px; max-width: 360px; width: 100%;
       text-align: center;
@@ -934,7 +933,7 @@
   </script>
 
   <!-- ── DISCLAIMER POPUP ── -->
-  <div id="disclaimerPopup">
+  <div id="disclaimerPopup" style="display:flex">
     <div class="disc-box">
       <div class="disc-logo">Ramban</div>
       <div class="disc-tagline">Botani Digital — Pijak Bumi Learning</div>
@@ -1043,10 +1042,6 @@
       if (typing) typing.style.display = 'block';
       if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
-      // Wikipedia search — no API key needed, always free
-      var searchQ = encodeURIComponent(q.replace(/ /g,'_'));
-      var wikiUrl = 'https://id.wikipedia.org/api/rest_v1/page/summary/' + searchQ;
-
       function addReply(text) {
         if (typing) typing.style.display = 'none';
         var bb = document.createElement('div');
@@ -1056,38 +1051,46 @@
         rambanChatHistory.push({ role: 'assistant', text: text });
       }
 
-      function buildReply(data) {
-        if (!data || !data.extract || data.type === 'disambiguation') return null;
-        var extract = data.extract.replace(/\n/g,' ')
-          .split(/(?<=[.!?])\s+/).slice(0,4).join(' ');
-        var title = data.title || '';
-        var url = data.content_urls && data.content_urls.desktop
-          ? '\n\n📖 Baca selengkapnya: ' + data.content_urls.desktop.page : '';
-        return '🌿 ' + title + '\n\n' + extract + url;
-      }
+      // Build messages array for OpenRouter
+      var messages = [
+        {
+          role: 'system',
+          content: 'Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning Indonesia. Jawab pertanyaan tentang tanaman dalam bahasa Indonesia yang ramah, singkat (maks 3 paragraf), dan mudah dipahami. Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, ekologi, dan fakta botani. Jika bukan tentang tanaman, jawab: Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman?'
+        }
+      ];
+      // Add history
+      rambanChatHistory.slice(-6).forEach(function(h) {
+        if (h.role === 'user' || h.role === 'assistant') {
+          messages.push({ role: h.role, content: h.text });
+        }
+      });
+      messages.push({ role: 'user', content: q });
 
-      // Try Wikipedia ID first, fallback to EN
-      fetch(wikiUrl, { headers: { 'User-Agent': 'RambanApp/1.0' } })
-        .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(data){
-          var reply = data ? buildReply(data) : null;
-          if (reply) { addReply(reply); return; }
-          // Fallback: Wikipedia EN
-          return fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + searchQ,
-            { headers: { 'User-Agent': 'RambanApp/1.0' } })
-            .then(function(r){ return r.ok ? r.json() : null; })
-            .then(function(d){
-              var r2 = d ? buildReply(d) : null;
-              if (r2) {
-                addReply(r2 + '\n\n(Info dalam Bahasa Inggris — artikel Indonesia belum tersedia)');
-              } else {
-                addReply('Maaf, saya tidak menemukan informasi tentang "' + q + '" di database botani. Coba gunakan nama ilmiah atau nama umum tanaman. 🌿');
-              }
-            });
+      fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer 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',
+          'HTTP-Referer': 'https://ramban.vercel.app',
+          'X-Title': 'Ramban Botani App'
+        },
+        body: JSON.stringify({
+          model: 'baidu/cobuddy:free',
+          messages: messages,
+          max_tokens: 500,
+          temperature: 0.6
         })
-        .catch(function(){
-          addReply('Tidak ada koneksi internet. Pastikan Anda online dan coba lagi. 🌿');
-        });
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var reply = data.choices && data.choices[0] && data.choices[0].message
+          ? data.choices[0].message.content
+          : (data.error ? 'Error: ' + data.error.message : 'Maaf, tidak ada respons. Coba lagi ya! 🌿');
+        addReply(reply);
+      })
+      .catch(function(err) {
+        addReply('Tidak ada koneksi internet. Pastikan Anda online dan coba lagi. 🌿');
+      });
     };
 
     window.rambanSendQuick = function(q) {
