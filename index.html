@@ -214,164 +214,135 @@
     .hist-date { font-size: 10px; color: #aaa; margin-top: 2px; }
 
 
-    <script>
-    // ── DISCLAIMER: show/hide based on localStorage ──
-    (function() {
-      var popup = document.getElementById('disclaimerPopup');
-      if (!popup) return;
-      if (localStorage.getItem('ramban_disc_agreed')) {
-        popup.style.display = 'none';
-      }
-    })();
-
-    window.agreeDisclaimer = function() {
-      localStorage.setItem('ramban_disc_agreed', '1');
-      var popup = document.getElementById('disclaimerPopup');
-      if (popup) popup.style.display = 'none';
-    };
-
-    // ── CHAT: all functions use lazy DOM lookup ──
-    var rambanChatOpen = false;
-    var rambanChatHistory = [];
-
-    window.rambanToggleChat = function() {
-      rambanChatOpen = !rambanChatOpen;
-      var panel = document.getElementById('chatPanel');
-      var fab   = document.getElementById('chatFab');
-      var input = document.getElementById('chatInputField');
-      var teaser = document.getElementById('chatTeaser');
-      if (!panel || !fab) return;
-      panel.style.display = rambanChatOpen ? 'flex' : 'none';
-      panel.style.flexDirection = 'column';
-      fab.textContent = rambanChatOpen ? '✕' : '🌿';
-      if (teaser) teaser.style.display = 'none';
-      if (rambanChatOpen && input) setTimeout(function(){ input.focus(); }, 150);
-      if (rambanChatOpen) {
-        localStorage.setItem('ramban_chat_used', '1');
-        var msgs = document.getElementById('chatMsgs');
-        if (msgs) setTimeout(function(){ msgs.scrollTop = msgs.scrollHeight; }, 60);
-      }
-    };
-
-    window.rambanSendChat = function() {
-      var input = document.getElementById('chatInputField');
-      var msgs  = document.getElementById('chatMsgs');
-      var typing = document.getElementById('chatTyping');
-      var quickEl = document.getElementById('quickBtns');
-      
-      if (!input) return;
-      var q = input.value.trim();
-      if (!q) return;
-      input.value = '';
-      if (quickEl) quickEl.style.display = 'none';
-
-      // Tambah chat user ke layar
-      var ub = document.createElement('div');
-      ub.className = 'chat-bubble user';
-      ub.textContent = q;
-      if (msgs) msgs.appendChild(ub);
-
-      // Simpan ke history internal
-      rambanChatHistory.push({ role: 'user', text: q });
-      
-      if (typing) typing.style.display = 'block';
-      if (msgs) msgs.scrollTop = msgs.scrollHeight;
-
-      // ── KONEKSI LANGSUNG KE GEMINI DARI FRONTEND ──
-      var geminiKey = "AIzaSyA5mMGixm8fUyg-g1nXEE0adb3bzqkbRW8"; 
-      var modelName = "gemini-1.5-flash"; 
-      var url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + geminiKey;
-
-      var formattedContents = [];
-      rambanChatHistory.slice(-8).forEach(function(h) {
-        formattedContents.push({
-          role: h.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: h.text }]
-        });
-      });
-
-      var payload = {
-        systemInstruction: { parts: [{ text: "Kamu adalah asisten botani AI bernama Ramban. Jawab pertanyaan seputar tanaman dengan singkat, ramah, dan gunakan bahasa Indonesia." }] },
-        contents: formattedContents,
-        generationConfig: { temperature: 0.6, maxOutputTokens: 400 }
-      };
-
-      fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (typing) typing.style.display = 'none';
-        
-        // Menangkap error spesifik dari Google (misal: API key salah)
-        if (data.error) {
-            throw new Error(data.error.message || "Error dari Google API");
-        }
-
-        var reply = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] 
-            ? data.candidates[0].content.parts[0].text 
-            : 'Maaf, saya tidak mengerti. Coba tanyakan hal lain ya! 🌿';
-        
-        var bb = document.createElement('div');
-        bb.className = 'chat-bubble bot';
-        bb.textContent = reply;
-        if (msgs) { msgs.appendChild(bb); msgs.scrollTop = msgs.scrollHeight; }
-        
-        rambanChatHistory.push({ role: 'assistant', text: reply });
-      })
-      .catch(function(err){
-        console.error("Error dari API:", err);
-        if (typing) typing.style.display = 'none';
-        var eb = document.createElement('div');
-        eb.className = 'chat-bubble bot';
-        eb.innerHTML = '<strong>Gagal:</strong> ' + err.message; 
-        eb.style.border = '1px solid #c0392b';
-        if (msgs) { msgs.appendChild(eb); msgs.scrollTop = msgs.scrollHeight; }
-      });
-    };
-
-    window.rambanSendQuick = function(q) {
-      var quickEl = document.getElementById('quickBtns');
-      var input = document.getElementById('chatInputField');
-      if (quickEl) quickEl.style.display = 'none';
-      if (input) input.value = q;
-      window.rambanSendChat();
-    };
-
-    // Wire send button & enter key
-    var sendBtn = document.getElementById('chatSend');
-    var inputEl = document.getElementById('chatInputField');
-    var closeBtn = document.getElementById('chatClose');
-    if (sendBtn) sendBtn.addEventListener('click', window.rambanSendChat);
-    if (closeBtn) closeBtn.addEventListener('click', window.rambanToggleChat);
-    if (inputEl) inputEl.addEventListener('keydown', function(e){ if(e.key==='Enter') window.rambanSendChat(); });
-
-    // Quick buttons via data-q
-    var quickEl = document.getElementById('quickBtns');
-    if (quickEl) {
-      quickEl.addEventListener('click', function(e) {
-        var btn = e.target.closest('[data-q]');
-        if (!btn) return;
-        window.rambanSendQuick(btn.getAttribute('data-q'));
-      });
+    /* ── Disclaimer Popup ── */
+    #disclaimerPopup {
+      position: fixed; inset: 0; z-index: 99999;
+      background: rgba(30,40,10,0.96);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px; font-family: sans-serif;
+    }
+    #disclaimerPopup.hidden { display: none; }
+    .disc-box {
+      background: #F1ECE2; border-top: 6px solid #2f4110;
+      border-radius: 4px; padding: 28px 24px; max-width: 360px; width: 100%;
+      text-align: center;
+    }
+    .disc-logo {
+      font-family: Georgia, serif; font-size: 42px; font-weight: 700;
+      color: #2f4110; line-height: 1; margin-bottom: 4px; letter-spacing: -2px;
+    }
+    .disc-tagline {
+      font-size: 10px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: #8a9070; margin-bottom: 20px;
+    }
+    .disc-title {
+      font-size: 13px; font-weight: 700; color: #2f4110;
+      margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;
+    }
+    .disc-text {
+      font-size: 12px; color: #555; line-height: 1.7; margin-bottom: 20px;
+    }
+    .disc-text strong { color: #c0392b; }
+    .disc-agree {
+      width: 100%; background: #2f4110; color: #F1ECE2;
+      border: none; padding: 13px; font-size: 13px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+      border-radius: 3px; transition: background .2s;
+    }
+    .disc-agree:hover { background: #1a2509; }
+    .disc-note {
+      font-size: 10px; color: #aaa; margin-top: 10px; line-height: 1.5;
     }
 
-    // Teaser: show after 3s if chat never used
-    if (!localStorage.getItem('ramban_chat_used')) {
-      setTimeout(function(){
-        var t = document.getElementById('chatTeaser');
-        if (t) t.style.display = 'flex';
-      }, 3000);
+    /* ── Chat Botani ── */
+    #chatFab {
+      position: fixed; bottom: 24px; right: 20px; z-index: 9000;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+      width: 52px; height: 52px; border-radius: 50%;
+      background: #2f4110; color: #F1ECE2;
+      border: none; cursor: pointer; font-size: 22px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .2s, box-shadow .2s;
     }
-    var teaserEl = document.getElementById('chatTeaser');
-    var teaserX  = document.getElementById('teaserClose');
-    if (teaserEl) teaserEl.addEventListener('click', function(){ window.rambanToggleChat(); });
-    if (teaserX)  teaserX.addEventListener('click', function(e){ e.stopPropagation(); teaserEl.style.display='none'; });
-  </script>
-</body>
-</html>
+    #chatFab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.4); }
+    #chatPanel {
+      position: fixed; bottom: 86px; right: 16px; z-index: 9000;
+      width: calc(100vw - 32px); max-width: 360px;
+      background: #F1ECE2; border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+      border-top: 4px solid #2f4110;
+      display: none; flex-direction: column;
+      max-height: 65vh; font-family: sans-serif;
+      overflow: hidden;
+    }
+    #chatPanel.open { display: flex; }
+    .chat-hdr {
+      background: #2f4110; color: #F1ECE2;
+      padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+    }
+    .chat-hdr-icon { font-size: 20px; }
+    .chat-hdr-info { flex: 1; }
+    .chat-hdr-name { font-size: 13px; font-weight: 700; }
+    .chat-hdr-sub { font-size: 10px; opacity: .7; }
+    .chat-close { background: none; border: none; color: #F1ECE2; font-size: 18px; cursor: pointer; padding: 0 4px; }
+    .chat-msgs {
+      flex: 1; overflow-y: auto; padding: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .chat-bubble {
+      max-width: 85%; padding: 8px 12px; border-radius: 12px;
+      font-size: 12px; line-height: 1.6;
+    }
+    .chat-bubble.bot {
+      background: #fff; color: #2b2b2b; border-bottom-left-radius: 3px;
+      align-self: flex-start; border: .5px solid #D6D1C6;
+    }
+    .chat-bubble.user {
+      background: #2f4110; color: #F1ECE2;
+      border-bottom-right-radius: 3px; align-self: flex-end;
+    }
+    .chat-typing {
+      display: none; align-self: flex-start;
+      background: #fff; border: .5px solid #D6D1C6;
+      padding: 8px 14px; border-radius: 12px 12px 12px 3px;
+      font-size: 18px; letter-spacing: 2px; color: #8a9070;
+    }
+    .chat-typing.show { display: block; }
+    .chat-input-row {
+      display: flex; gap: 6px; padding: 10px 12px;
+      border-top: .5px solid #D6D1C6; background: #F1ECE2;
+    }
+    .chat-input {
+      flex: 1; border: 1px solid #D6D1C6; border-radius: 20px;
+      padding: 8px 14px; font-size: 12px; font-family: sans-serif;
+      background: #fff; outline: none; color: #2b2b2b;
+    }
+    .chat-input:focus { border-color: #2f4110; }
+    .chat-send {
+      background: #2f4110; color: #F1ECE2; border: none;
+      border-radius: 50%; width: 36px; height: 36px;
+      cursor: pointer; font-size: 16px; display: flex;
+      align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background .2s;
+    }
+    .chat-send:hover { background: #1a2509; }
+    .chat-quickbtns {
+      display: flex; flex-wrap: wrap; gap: 5px;
+      padding: 0 12px 10px;
+    }
+    .chat-qbtn {
+      background: rgba(47,65,16,.08); border: .5px solid rgba(47,65,16,.2);
+      border-radius: 12px; padding: 4px 10px; font-size: 10px;
+      color: #2f4110; cursor: pointer; font-weight: 600;
+      transition: background .15s;
+    }
+    .chat-qbtn:hover { background: rgba(47,65,16,.15); }
+
+  </style>
+</head>
+<body class="min-h-screen relative flex flex-col items-center select-none">
+
   <!-- Background Krem -->
   <div 
     class="absolute top-0 left-0 w-full h-[50vh] bg-[#F1ECE2] z-0 transition-transform duration-200 ease-out scale-[1.1]" 
@@ -1056,124 +1027,54 @@
       var msgs  = document.getElementById('chatMsgs');
       var typing = document.getElementById('chatTyping');
       var quickEl = document.getElementById('quickBtns');
-      
       if (!input) return;
       var q = input.value.trim();
       if (!q) return;
       input.value = '';
       if (quickEl) quickEl.style.display = 'none';
 
-      // Tambah chat user ke layar
+      // Add user bubble
       var ub = document.createElement('div');
       ub.className = 'chat-bubble user';
       ub.textContent = q;
       if (msgs) msgs.appendChild(ub);
 
-      // Simpan ke history internal
       rambanChatHistory.push({ role: 'user', text: q });
-      
       if (typing) typing.style.display = 'block';
       if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
-      // ── KONEKSI LANGSUNG KE GEMINI DARI FRONTEND ──
-      var geminiKey = "AIzaSyA5mMGixm8fUyg-g1nXEE0adb3bzqkbRW8"; 
-      
-      // PERBAIKAN: Gunakan model standar yang pasti ada
-      var modelName = "gemini-1.5-flash"; 
-      var url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + geminiKey;
-
-      var formattedContents = [];
-      rambanChatHistory.slice(-8).forEach(function(h) {
-        formattedContents.push({
-          role: h.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: h.text }]
-        });
-      });
-
-      var payload = {
-        systemInstruction: { parts: [{ text: "Kamu adalah asisten botani AI bernama Ramban. Jawab pertanyaan seputar tanaman dengan singkat, ramah, dan gunakan bahasa Indonesia." }] },
-        contents: formattedContents,
-        generationConfig: { temperature: 0.6, maxOutputTokens: 400 }
-      };
-
-      fetch(url, {
+      fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ message: q, history: rambanChatHistory.slice(-8) })
       })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
+      .then(function(r){ return r.json(); })
+      .then(function(data){
         if (typing) typing.style.display = 'none';
-        
-        // Menangkap error spesifik dari Google (misal: API key salah)
-        if (data.error) {
-            throw new Error(data.error.message || "Error dari Google API");
-        }
-
-        var reply = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] 
-            ? data.candidates[0].content.parts[0].text 
-            : 'Maaf, saya tidak mengerti. Coba tanyakan hal lain ya! 🌿';
-        
+        var reply = data.reply || 'Maaf, tidak ada respons. Coba lagi ya! 🌿';
         var bb = document.createElement('div');
         bb.className = 'chat-bubble bot';
         bb.textContent = reply;
         if (msgs) { msgs.appendChild(bb); msgs.scrollTop = msgs.scrollHeight; }
-        
         rambanChatHistory.push({ role: 'assistant', text: reply });
       })
-      .catch(function(err){
-        console.error("Error dari API:", err);
+      .catch(function(){
         if (typing) typing.style.display = 'none';
         var eb = document.createElement('div');
         eb.className = 'chat-bubble bot';
-        // PERBAIKAN: Tampilkan pesan error aslinya agar kita tahu masalahnya
-        eb.innerHTML = '<strong>Gagal:</strong> ' + err.message; 
-        eb.style.border = '1px solid #c0392b'; // Beri border merah untuk tanda error
+        eb.textContent = 'Tidak ada koneksi internet. Coba lagi saat online. 🌿';
         if (msgs) { msgs.appendChild(eb); msgs.scrollTop = msgs.scrollHeight; }
       });
     };
 
-      var payload = {
-        systemInstruction: { parts: [{ text: "Kamu adalah asisten botani AI bernama Ramban. Jawab pertanyaan seputar tanaman dengan singkat, ramah, dan gunakan bahasa Indonesia." }] },
-        contents: formattedContents,
-        generationConfig: { temperature: 0.6, maxOutputTokens: 400 }
-      };
-
-      fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (typing) typing.style.display = 'none';
-        
-        // Cek jika API Gemini menolak request atau limit habis
-        if (data.error) {
-            throw new Error(data.error.message);
-        }
-
-        // Parsing balasan Gemini
-        var reply = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] 
-            ? data.candidates[0].content.parts[0].text 
-            : 'Maaf, saya tidak mengerti. Coba tanyakan hal lain ya! 🌿';
-        
-        var bb = document.createElement('div');
-        bb.className = 'chat-bubble bot';
-        bb.textContent = reply;
-        if (msgs) { msgs.appendChild(bb); msgs.scrollTop = msgs.scrollHeight; }
-        
-        rambanChatHistory.push({ role: 'assistant', text: reply });
-      })
-      .catch(function(err){
-        console.error("Error dari API:", err);
-        if (typing) typing.style.display = 'none';
-        var eb = document.createElement('div');
-        eb.className = 'chat-bubble bot';
-        eb.textContent = 'Terjadi kesalahan jaringan atau API. Cek console untuk detailnya. 🌿';
-        if (msgs) { msgs.appendChild(eb); msgs.scrollTop = msgs.scrollHeight; }
-      });
+    window.rambanSendQuick = function(q) {
+      var quickEl = document.getElementById('quickBtns');
+      var input = document.getElementById('chatInputField');
+      if (quickEl) quickEl.style.display = 'none';
+      if (input) input.value = q;
+      window.rambanSendChat();
     };
+
     // Wire send button & enter key
     var sendBtn = document.getElementById('chatSend');
     var inputEl = document.getElementById('chatInputField');
