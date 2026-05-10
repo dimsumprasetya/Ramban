@@ -1,4 +1,4 @@
-<!DOCTYPE html>`
+<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
@@ -177,40 +177,7 @@
       }
     }
 
-    /* Camera overlay guide */
-    #cameraGuide {
-      position: fixed; inset: 0; z-index: 9999;
-      background: rgba(0,0,0,0.75);
-      display: none; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 16px;
-    }
-    #cameraGuide.show { display: flex; }
-    .cam-frame {
-      width: 220px; height: 220px;
-      border: 2px solid #F1ECE2;
-      border-radius: 12px;
-      position: relative;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);
-    }
-    .cam-frame::before, .cam-frame::after,
-    .cam-corner-bl, .cam-corner-br {
-      content: '';
-      position: absolute;
-      width: 24px; height: 24px;
-      border-color: #90cc40;
-      border-style: solid;
-    }
-    .cam-frame::before { top:-2px; left:-2px; border-width: 3px 0 0 3px; border-radius: 10px 0 0 0; }
-    .cam-frame::after  { top:-2px; right:-2px; border-width: 3px 3px 0 0; border-radius: 0 10px 0 0; }
-    .cam-corner-bl     { bottom:-2px; left:-2px; border-width: 0 0 3px 3px; border-radius: 0 0 0 10px; }
-    .cam-corner-br     { bottom:-2px; right:-2px; border-width: 0 3px 3px 0; border-radius: 0 0 10px 0; }
-    .cam-tip {
-      color: #F1ECE2; font-size: 12px; font-weight: 500;
-      text-align: center; max-width: 240px; line-height: 1.6;
-      font-family: sans-serif;
-    }
-    .cam-tip strong { color: #90cc40; display: block; margin-bottom: 4px; }
+
 
     /* Toxicity badge */
     #toxicBadge {
@@ -245,6 +212,131 @@
     .hist-name { font-size: 13px; font-weight: 600; color: #2f4110; }
     .hist-latin { font-size: 11px; color: #888; font-style: italic; }
     .hist-date { font-size: 10px; color: #aaa; margin-top: 2px; }
+
+
+    /* ── Disclaimer Popup ── */
+    #disclaimerPopup {
+      position: fixed; inset: 0; z-index: 99999;
+      background: rgba(30,40,10,0.96);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px; font-family: sans-serif;
+    }
+    #disclaimerPopup.hidden { display: none; }
+    .disc-box {
+      background: #F1ECE2; border-top: 6px solid #2f4110;
+      border-radius: 4px; padding: 28px 24px; max-width: 360px; width: 100%;
+      text-align: center;
+    }
+    .disc-logo {
+      font-family: Georgia, serif; font-size: 42px; font-weight: 700;
+      color: #2f4110; line-height: 1; margin-bottom: 4px; letter-spacing: -2px;
+    }
+    .disc-tagline {
+      font-size: 10px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: #8a9070; margin-bottom: 20px;
+    }
+    .disc-title {
+      font-size: 13px; font-weight: 700; color: #2f4110;
+      margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;
+    }
+    .disc-text {
+      font-size: 12px; color: #555; line-height: 1.7; margin-bottom: 20px;
+    }
+    .disc-text strong { color: #c0392b; }
+    .disc-agree {
+      width: 100%; background: #2f4110; color: #F1ECE2;
+      border: none; padding: 13px; font-size: 13px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+      border-radius: 3px; transition: background .2s;
+    }
+    .disc-agree:hover { background: #1a2509; }
+    .disc-note {
+      font-size: 10px; color: #aaa; margin-top: 10px; line-height: 1.5;
+    }
+
+    /* ── Chat Botani ── */
+    #chatFab {
+      position: fixed; bottom: 24px; right: 20px; z-index: 9000;
+      width: 52px; height: 52px; border-radius: 50%;
+      background: #2f4110; color: #F1ECE2;
+      border: none; cursor: pointer; font-size: 22px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .2s, box-shadow .2s;
+    }
+    #chatFab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.4); }
+    #chatPanel {
+      position: fixed; bottom: 86px; right: 16px; z-index: 9000;
+      width: calc(100vw - 32px); max-width: 360px;
+      background: #F1ECE2; border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+      border-top: 4px solid #2f4110;
+      display: none; flex-direction: column;
+      max-height: 65vh; font-family: sans-serif;
+      overflow: hidden;
+    }
+    #chatPanel.open { display: flex; }
+    .chat-hdr {
+      background: #2f4110; color: #F1ECE2;
+      padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+    }
+    .chat-hdr-icon { font-size: 20px; }
+    .chat-hdr-info { flex: 1; }
+    .chat-hdr-name { font-size: 13px; font-weight: 700; }
+    .chat-hdr-sub { font-size: 10px; opacity: .7; }
+    .chat-close { background: none; border: none; color: #F1ECE2; font-size: 18px; cursor: pointer; padding: 0 4px; }
+    .chat-msgs {
+      flex: 1; overflow-y: auto; padding: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .chat-bubble {
+      max-width: 85%; padding: 8px 12px; border-radius: 12px;
+      font-size: 12px; line-height: 1.6;
+    }
+    .chat-bubble.bot {
+      background: #fff; color: #2b2b2b; border-bottom-left-radius: 3px;
+      align-self: flex-start; border: .5px solid #D6D1C6;
+    }
+    .chat-bubble.user {
+      background: #2f4110; color: #F1ECE2;
+      border-bottom-right-radius: 3px; align-self: flex-end;
+    }
+    .chat-typing {
+      display: none; align-self: flex-start;
+      background: #fff; border: .5px solid #D6D1C6;
+      padding: 8px 14px; border-radius: 12px 12px 12px 3px;
+      font-size: 18px; letter-spacing: 2px; color: #8a9070;
+    }
+    .chat-typing.show { display: block; }
+    .chat-input-row {
+      display: flex; gap: 6px; padding: 10px 12px;
+      border-top: .5px solid #D6D1C6; background: #F1ECE2;
+    }
+    .chat-input {
+      flex: 1; border: 1px solid #D6D1C6; border-radius: 20px;
+      padding: 8px 14px; font-size: 12px; font-family: sans-serif;
+      background: #fff; outline: none; color: #2b2b2b;
+    }
+    .chat-input:focus { border-color: #2f4110; }
+    .chat-send {
+      background: #2f4110; color: #F1ECE2; border: none;
+      border-radius: 50%; width: 36px; height: 36px;
+      cursor: pointer; font-size: 16px; display: flex;
+      align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background .2s;
+    }
+    .chat-send:hover { background: #1a2509; }
+    .chat-quickbtns {
+      display: flex; flex-wrap: wrap; gap: 5px;
+      padding: 0 12px 10px;
+    }
+    .chat-qbtn {
+      background: rgba(47,65,16,.08); border: .5px solid rgba(47,65,16,.2);
+      border-radius: 12px; padding: 4px 10px; font-size: 10px;
+      color: #2f4110; cursor: pointer; font-weight: 600;
+      transition: background .15s;
+    }
+    .chat-qbtn:hover { background: rgba(47,65,16,.15); }
 
   </style>
 </head>
@@ -321,22 +413,7 @@
     <!-- Gallery input only -->
     <input type="file" accept="image/*" id="galleryInput" class="hidden" multiple />
 
-    <!-- Camera Guide Overlay -->
-    <div id="cameraGuide">
-      <div class="cam-frame">
-        <div class="cam-corner-bl"></div>
-        <div class="cam-corner-br"></div>
-      </div>
-      <div class="cam-tip">
-        <strong>📸 Tips Foto Terbaik</strong>
-        Fokuskan pada <strong>satu helai daun, bunga, atau buah</strong> secara dekat.<br>
-        Hindari memotret seluruh pohon dari jauh.
-      </div>
-      <button onclick="document.getElementById('cameraGuide').classList.remove('show')"
-        style="background:#2f4110;color:#F1ECE2;border:none;padding:10px 24px;font-size:13px;font-weight:700;border-radius:4px;cursor:pointer;font-family:sans-serif;letter-spacing:1px;">
-        MENGERTI, LANJUT FOTO
-      </button>
-    </div>
+
 
     <!-- History Panel -->
     <div id="historyPanel">
@@ -452,11 +529,8 @@
     </div>
   </div>
 
-  <footer class="relative z-20 w-full max-w-md text-center px-6 pb-8 mt-auto flex flex-col gap-3">
-    <p class="text-[#F1ECE2]/60 leading-relaxed font-sans border-t border-[#F1ECE2]/20 pt-4" style="font-size: max(10px, 0.625rem);">
-      <strong>DISCLAIMER:</strong> Hasil identifikasi ini diproses menggunakan teknologi kecerdasan buatan (AI) dan mungkin tidak sepenuhnya akurat. Harap lakukan identifikasi lebih lanjut dan konsultasikan bersama ahlinya, terutama sebelum memanfaatkan tanaman untuk keperluan konsumsi, terapi, maupun pengobatan medis.
-    </p>
-    <p class="text-[#F1ECE2]/80 text-[10px] tracking-widest uppercase mt-2">
+  <footer class="relative z-20 w-full max-w-md text-center px-6 pb-8 mt-auto">
+    <p class="text-[#F1ECE2]/40 text-[10px] tracking-widest uppercase border-t border-[#F1ECE2]/10 pt-4">
       created by Pijak Bumi Learning
     </p>
   </footer>
@@ -482,7 +556,6 @@
     const toxicBadge = document.getElementById('toxicBadge');
     const offlineBar = document.getElementById('offlineBar');
     const offlineQueueBtn = document.getElementById('offlineQueueBtn');
-    const cameraGuide = document.getElementById('cameraGuide');
 
     // --- State ---
     let status = 'idle';
@@ -586,11 +659,17 @@
       btn.addEventListener('click', (e) => { e.stopPropagation(); collectedImages.splice(i, 1); refreshSlots(); });
     });
 
-    // --- Global slot tap → tutup modal → tampil guide → buka kamera ---
+    // --- Global slot tap → langsung buka kamera ---
     window.slotTap = function(i) {
-   if (collectedImages[i]) return; // Jika slot sudah terisi, abaikan (klik tombol '✕' untuk menghapus)
-  triggerCamera();
-};
+      if (collectedImages[i]) return;
+      closePicker();
+      setTimeout(() => triggerCamera(), 100);
+    };
+
+    window.removeSlot = function(i) {
+      collectedImages.splice(i, 1);
+      refreshSlots();
+    };
 
     // --- Dynamic input factory ---
     function triggerCamera() {
@@ -845,8 +924,140 @@
 
     // --- Init ---
     updateUI();
+
+    // ── DISCLAIMER POPUP ──
+    function agreeDisclaimer() {
+      localStorage.setItem('ramban_disc_agreed', '1');
+      document.getElementById('disclaimerPopup').classList.add('hidden');
+    }
+    // Show popup if not agreed yet
+    if (!localStorage.getItem('ramban_disc_agreed')) {
+      document.getElementById('disclaimerPopup').classList.remove('hidden');
+    } else {
+      document.getElementById('disclaimerPopup').classList.add('hidden');
+    }
+
+    // ── CHAT BOTANI (PlantNet knowledge + Wikipedia) ──
+    let chatHistory = [
+      { role: 'system', text: 'Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning. Jawab pertanyaan tentang tanaman dalam bahasa Indonesia dengan singkat, informatif, dan ramah. Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, dan fakta botani. Jika pertanyaan bukan tentang tanaman, arahkan kembali ke topik botani.' }
+    ];
+    let chatOpen = false;
+
+    function toggleChat() {
+      chatOpen = !chatOpen;
+      const panel = document.getElementById('chatPanel');
+      const fab = document.getElementById('chatFab');
+      panel.classList.toggle('open', chatOpen);
+      fab.textContent = chatOpen ? '✕' : '🌿';
+      if (chatOpen) {
+        document.getElementById('chatInput').focus();
+        scrollChatBottom();
+      }
+    }
+
+    function scrollChatBottom() {
+      const msgs = document.getElementById('chatMsgs');
+      setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
+    }
+
+    function addBubble(text, isUser) {
+      const msgs = document.getElementById('chatMsgs');
+      const div = document.createElement('div');
+      div.className = 'chat-bubble ' + (isUser ? 'user' : 'bot');
+      div.textContent = text;
+      msgs.appendChild(div);
+      scrollChatBottom();
+      return div;
+    }
+
+    function sendQuick(q) {
+      document.getElementById('quickBtns').style.display = 'none';
+      document.getElementById('chatInput').value = q;
+      sendChat();
+    }
+
+    async function sendChat() {
+      const input = document.getElementById('chatInput');
+      const q = input.value.trim();
+      if (!q) return;
+      input.value = '';
+
+      addBubble(q, true);
+      chatHistory.push({ role: 'user', text: q });
+
+      // Show typing
+      const typing = document.getElementById('chatTyping');
+      typing.classList.add('show');
+      scrollChatBottom();
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: q, history: chatHistory.slice(-8) })
+        });
+        const data = await response.json();
+        typing.classList.remove('show');
+
+        if (data.reply) {
+          addBubble(data.reply, false);
+          chatHistory.push({ role: 'assistant', text: data.reply });
+        } else {
+          addBubble('Maaf, terjadi gangguan. Coba lagi ya! 🌿', false);
+        }
+      } catch {
+        typing.classList.remove('show');
+        addBubble('Tidak ada koneksi internet. Pastikan Anda online dan coba lagi.', false);
+      }
+    }
     checkOnline();
 
   </script>
+
+  <!-- ── DISCLAIMER POPUP ── -->
+  <div id="disclaimerPopup">
+    <div class="disc-box">
+      <div class="disc-logo">Ramban</div>
+      <div class="disc-tagline">Botani Digital — Pijak Bumi Learning</div>
+      <div class="disc-title">⚠️ Perhatian Sebelum Melanjutkan</div>
+      <p class="disc-text">
+        Aplikasi ini menggunakan <strong>kecerdasan buatan (AI)</strong> untuk membantu identifikasi tanaman dan <strong>bukan pengganti diagnosis medis atau konsultasi ahli botani profesional</strong>.<br><br>
+        Jangan mengonsumsi, mengolah, atau menggunakan tanaman berdasarkan hasil identifikasi ini tanpa verifikasi lebih lanjut, terutama bila menyangkut <strong>kesehatan manusia atau hewan peliharaan</strong>.
+      </p>
+      <button class="disc-agree" onclick="agreeDisclaimer()">✓ Saya Mengerti & Setuju</button>
+      <div class="disc-note">Persetujuan disimpan di perangkat Anda. Tidak ditampilkan lagi setelah ini.</div>
+    </div>
+  </div>
+
+  <!-- ── CHAT BOTANI FLOATING BUTTON ── -->
+  <button id="chatFab" onclick="toggleChat()" title="Tanya Ahli Botani AI">🌿</button>
+
+  <!-- ── CHAT PANEL ── -->
+  <div id="chatPanel">
+    <div class="chat-hdr">
+      <div class="chat-hdr-icon">🌿</div>
+      <div class="chat-hdr-info">
+        <div class="chat-hdr-name">Ahli Botani AI</div>
+        <div class="chat-hdr-sub">Didukung Pl@ntNet × Wikipedia</div>
+      </div>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-msgs" id="chatMsgs">
+      <div class="chat-bubble bot">Halo! Saya asisten botani Ramban. Ada yang ingin Anda tanyakan tentang tanaman? 🌱</div>
+    </div>
+    <div class="chat-typing" id="chatTyping">•••</div>
+    <div class="chat-quickbtns" id="quickBtns">
+      <div class="chat-qbtn" onclick="sendQuick('Apa tanaman yang cocok untuk dalam ruangan?')">🏠 Tanaman indoor</div>
+      <div class="chat-qbtn" onclick="sendQuick('Tanaman apa yang beracun untuk kucing?')">🐱 Berbahaya untuk kucing</div>
+      <div class="chat-qbtn" onclick="sendQuick('Bagaimana cara merawat tanaman sukulen?')">🌵 Cara rawat sukulen</div>
+      <div class="chat-qbtn" onclick="sendQuick('Tanaman herbal apa yang mudah ditanam di rumah?')">🌿 Herbal rumahan</div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chatInput" type="text" placeholder="Tanya tentang tanaman..." 
+        onkeydown="if(event.key==='Enter')sendChat()" maxlength="300" />
+      <button class="chat-send" onclick="sendChat()">➤</button>
+    </div>
+  </div>
+
 </body>
 </html>
