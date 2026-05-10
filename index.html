@@ -257,6 +257,7 @@
     /* ── Chat Botani ── */
     #chatFab {
       position: fixed; bottom: 24px; right: 20px; z-index: 9000;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
       width: 52px; height: 52px; border-radius: 50%;
       background: #2f4110; color: #F1ECE2;
       border: none; cursor: pointer; font-size: 22px;
@@ -937,8 +938,8 @@
       document.getElementById('disclaimerPopup').classList.add('hidden');
     }
 
-    // ── CHAT BOTANI — robust addEventListener (no onclick attr) ──
-    (function() {
+    // ── CHAT BOTANI — run after full DOM loaded ──
+    window.addEventListener('load', function() {
       let chatOpen = false;
       let chatHistory = [];
       let teaserShown = false;
@@ -1050,7 +1051,7 @@
         if (inputEl) inputEl.value = q;
         sendChat();
       };
-    })();
+    });
     checkOnline();
 
   </script>
