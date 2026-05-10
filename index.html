@@ -938,8 +938,8 @@
       document.getElementById('disclaimerPopup').classList.add('hidden');
     }
 
-    // ── CHAT BOTANI — run after full DOM loaded ──
-    window.addEventListener('load', function() {
+    // ── CHAT BOTANI — DOMContentLoaded (more reliable than load) ──
+    document.addEventListener('DOMContentLoaded', function() {
       let chatOpen = false;
       let chatHistory = [];
       let teaserShown = false;
@@ -1052,12 +1052,16 @@
         sendChat();
       };
     });
+    // Fallback: if DOMContentLoaded already fired, init immediately
+    if (document.readyState !== 'loading') {
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+    }
     checkOnline();
 
   </script>
 
   <!-- ── DISCLAIMER POPUP ── -->
-  <div id="disclaimerPopup">
+  <div id="disclaimerPopup" class="hidden">
     <div class="disc-box">
       <div class="disc-logo">Ramban</div>
       <div class="disc-tagline">Botani Digital — Pijak Bumi Learning</div>
