@@ -63,7 +63,7 @@ Akhiri jawaban dengan emoji tanaman yang relevan.`;
     const geminiKey = "AIzaSyA5mMGixm8fUyg-g1nXEE0adb3bzqkbRW8"; 
     
     // Perbaikan: Menghapus tab yang nyelip di URL agar endpoint valid
-    const modelName = "gemini-2.5-flash-lite"; 
+    const modelName = "gemini-1.5-flash"; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
 
     // ── 3. Siapkan Payload ──
