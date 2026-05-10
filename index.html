@@ -1048,9 +1048,11 @@
 
       // ── KONEKSI LANGSUNG KE GEMINI DARI FRONTEND ──
       var geminiKey = "AIzaSyA5mMGixm8fUyg-g1nXEE0adb3bzqkbRW8"; 
-      var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + geminiKey;
+      
+      // PERBAIKAN: Gunakan model standar yang pasti ada
+      var modelName = "gemini-1.5-flash"; 
+      var url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + geminiKey;
 
-      // Format history Ramban agar sesuai dengan format Gemini
       var formattedContents = [];
       rambanChatHistory.slice(-8).forEach(function(h) {
         formattedContents.push({
@@ -1058,6 +1060,49 @@
           parts: [{ text: h.text }]
         });
       });
+
+      var payload = {
+        systemInstruction: { parts: [{ text: "Kamu adalah asisten botani AI bernama Ramban. Jawab pertanyaan seputar tanaman dengan singkat, ramah, dan gunakan bahasa Indonesia." }] },
+        contents: formattedContents,
+        generationConfig: { temperature: 0.6, maxOutputTokens: 400 }
+      };
+
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (typing) typing.style.display = 'none';
+        
+        // Menangkap error spesifik dari Google (misal: API key salah)
+        if (data.error) {
+            throw new Error(data.error.message || "Error dari Google API");
+        }
+
+        var reply = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] 
+            ? data.candidates[0].content.parts[0].text 
+            : 'Maaf, saya tidak mengerti. Coba tanyakan hal lain ya! 🌿';
+        
+        var bb = document.createElement('div');
+        bb.className = 'chat-bubble bot';
+        bb.textContent = reply;
+        if (msgs) { msgs.appendChild(bb); msgs.scrollTop = msgs.scrollHeight; }
+        
+        rambanChatHistory.push({ role: 'assistant', text: reply });
+      })
+      .catch(function(err){
+        console.error("Error dari API:", err);
+        if (typing) typing.style.display = 'none';
+        var eb = document.createElement('div');
+        eb.className = 'chat-bubble bot';
+        // PERBAIKAN: Tampilkan pesan error aslinya agar kita tahu masalahnya
+        eb.innerHTML = '<strong>Gagal:</strong> ' + err.message; 
+        eb.style.border = '1px solid #c0392b'; // Beri border merah untuk tanda error
+        if (msgs) { msgs.appendChild(eb); msgs.scrollTop = msgs.scrollHeight; }
+      });
+    };
 
       var payload = {
         systemInstruction: { parts: [{ text: "Kamu adalah asisten botani AI bernama Ramban. Jawab pertanyaan seputar tanaman dengan singkat, ramah, dan gunakan bahasa Indonesia." }] },
