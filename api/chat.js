@@ -49,7 +49,7 @@ Akhiri jawaban dengan emoji tanaman yang relevan.`;
       messages.push({ role: 'user', parts: [{ text: message }] });
     }
 
-    const geminiKey = "AIzaSyBPdZ1VJqb_yW9RTLm6bqgopMNhv5zv1xQ";
+    const geminiKey = "AIzaSyA5mMGixm8fUyg-g1nXEE0adb3bzqkbRW8";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/	gemini-2.5-flash-lite:generateContent?key=${geminiKey}`;
 
     const payload = {
