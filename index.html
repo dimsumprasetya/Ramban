@@ -1340,11 +1340,29 @@ body.chat-open {
       }
     });
 
-    // Desktop: force-enable mouse wheel scrolling on main page
+    // Desktop: smoother mouse-wheel scrolling on main page
+    var wheelQueuedDelta = 0;
+    var wheelAnimating = false;
+
+    function flushWheelScroll() {
+      if (!wheelQueuedDelta) {
+        wheelAnimating = false;
+        return;
+      }
+      var step = wheelQueuedDelta * 0.35;
+      wheelQueuedDelta -= step;
+      window.scrollBy({ top: step, left: 0, behavior: 'auto' });
+      requestAnimationFrame(flushWheelScroll);
+    }
+
     document.addEventListener('wheel', function(e) {
       if (rambanChatOpen) return;
       if (e.target && e.target.closest && e.target.closest('#chatPanel')) return;
-      window.scrollBy({ top: e.deltaY, left: 0, behavior: 'auto' });
+      wheelQueuedDelta += e.deltaY;
+      if (!wheelAnimating) {
+        wheelAnimating = true;
+        requestAnimationFrame(flushWheelScroll);
+      }
     }, { passive: true });
 
     // Extra guard on first load: make sure page is not stuck in locked state
