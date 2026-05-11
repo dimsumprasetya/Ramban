@@ -1178,12 +1178,25 @@ html, body {
         })
       })
       .then(function(r) {
-        if (!r.ok) {
-          return r.json().then(function(errData) {
-            throw new Error('API Error ' + r.status + ': ' + (errData.error && errData.error.message || JSON.stringify(errData)));
-          });
-        }
-        return r.json();
+        return r.text().then(function(raw) {
+          var data = null;
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch (_) {
+            data = null;
+          }
+
+          if (!r.ok) {
+            var errMsg = data && (data.error && data.error.message || data.error) || raw || ('HTTP ' + r.status);
+            throw new Error('API Error ' + r.status + ': ' + errMsg);
+          }
+
+          if (!data || typeof data !== 'object') {
+            throw new Error('Respons server tidak valid. Pastikan endpoint /api/chat aktif.');
+          }
+
+          return data;
+        });
       })
       .then(function(data) {
         var reply = data && data.reply;
