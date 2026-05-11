@@ -300,15 +300,17 @@
       padding: 6px 14px; border-radius: 20px;
       letter-spacing: .5px;
     }
-    .chat-msgs {
-      flex: 1; overflow-y: scroll; overflow-x: hidden;
-      padding: 16px; display: flex; flex-direction: column; gap: 10px;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior-y: contain;
-      touch-action: pan-y;
-      scroll-behavior: smooth;
-      background: #f7f3eb;
-    }
+.chat-msgs {
+  flex: 1; overflow-y: scroll; overflow-x: hidden;
+  padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none; /* Ubah ini menjadi none */
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none; /* tahan bounce horizontal */
+  touch-action: pan-y;
+  scroll-behavior: smooth;
+  background: #f7f3eb;
+}
     .chat-msgs::-webkit-scrollbar { width: 3px; }
     .chat-msgs::-webkit-scrollbar-track { background: transparent; }
     .chat-msgs::-webkit-scrollbar-thumb { background: #2f4110; border-radius: 4px; }
@@ -1088,7 +1090,27 @@
     // ── CHAT: all functions use lazy DOM lookup ──
     var rambanChatOpen = false;
     var rambanChatHistory = [];
+    var rambanPageScrollTop = 0;
 
+    function lockPageScroll() {
+      rambanPageScrollTop = window.scrollY || window.pageYOffset || 0;
+      document.body.style.position = 'fixed';
+      document.body.style.top = '-' + rambanPageScrollTop + 'px';
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function unlockPageScroll() {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, rambanPageScrollTop);
+    }
     window.rambanToggleChat = function() {
       rambanChatOpen = !rambanChatOpen;
       var panel = document.getElementById('chatPanel');
@@ -1107,6 +1129,8 @@
       document.body.style.overflow = rambanChatOpen ? 'hidden' : '';
       document.body.style.position = rambanChatOpen ? 'fixed' : '';
       document.body.style.width = rambanChatOpen ? '100%' : '';
+      if (rambanChatOpen) lockPageScroll();
+      else unlockPageScroll();
 
       if (teaser) teaser.style.display = 'none';
 
