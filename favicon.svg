@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="6" cy="6" r="2.6" fill="#d1cec3"/>
+    </pattern>
+  </defs>
+  <rect width="256" height="256" fill="#efede5"/>
+  <rect width="256" height="256" fill="url(#dots)"/>
+  <text x="26" y="212" font-size="230" font-family="Georgia, 'Times New Roman', serif" font-weight="700" fill="#2f4a08">R</text>
+</svg>

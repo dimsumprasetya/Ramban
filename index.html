@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ramban App</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="shortcut icon" href="favicon.svg">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="manifest" href="site.webmanifest">
@@ -277,7 +278,7 @@ body.chat-open {
       touch-action: manipulation; -webkit-tap-highlight-color: transparent;
       width: 52px; height: 52px; border-radius: 50%;
       background: #2f4110; color: #F1ECE2;
-      border: none; cursor: pointer; font-size: 22px;
+      border: none; cursor: pointer; font-size: 18px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
       display: flex; align-items: center; justify-content: center;
       transition: transform .2s, box-shadow .2s;
@@ -1041,15 +1042,15 @@ body.chat-open {
 
   <!-- ── CHAT BOTANI FLOATING BUTTON ── -->
   <div id="chatTeaser" style="position:fixed;bottom:86px;right:16px;z-index:1000;background:#2f4110;color:#F1ECE2;font-family:sans-serif;font-size:11px;font-weight:600;padding:8px 14px 8px 10px;border-radius:20px 20px 4px 20px;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;max-width:200px;line-height:1.4;cursor:pointer;animation:fadeIn .4s ease;">
-    🌿 <span>Punya pertanyaan soal tanaman? Tanya saya!</span>
+    🐘🔍 <span>Punya pertanyaan soal tanaman? Tanya saya!</span>
     <span id="teaserClose" style="margin-left:4px;opacity:.6;font-size:14px">×</span>
   </div>
-  <button id="chatFab" onclick="window.rambanToggleChat()" title="Tanya Ahli Botani AI">🌿</button>
+  <button id="chatFab" onclick="window.rambanToggleChat()" title="Tanya Ahli Botani AI">🐘🔍</button>
 
   <!-- ── CHAT PANEL ── -->
   <div id="chatPanel">
     <div class="chat-hdr">
-      <div class="chat-hdr-icon">🌿</div>
+      <div class="chat-hdr-icon">🐘🔍</div>
       <div class="chat-hdr-info">
         <div class="chat-hdr-name">Ahli Botani AI</div>
         <div class="chat-hdr-sub">Chat Asisten Ramban</div>
