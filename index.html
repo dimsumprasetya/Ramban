@@ -418,18 +418,6 @@ body.chat-open {
     }
     .chat-qbtn:hover { background: rgba(47,65,16,.15); }
 
-    #scrollControls {
-      position: fixed; left: max(10px, env(safe-area-inset-left));
-      bottom: max(18px, env(safe-area-inset-bottom)); z-index: 1080;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .scroll-btn {
-      width: clamp(38px, 9vw, 46px); height: clamp(38px, 9vw, 46px); border-radius: 50%;
-      border: none; background: rgba(47,65,16,0.92); color: #F1ECE2;
-      font-size: 18px; font-weight: 700; cursor: pointer;
-      box-shadow: 0 4px 16px rgba(0,0,0,.28);
-    }
-    .scroll-btn:active { transform: scale(0.97); }
 
   </style>
 </head>
@@ -1050,10 +1038,6 @@ body.chat-open {
   </div>
 
 
-  <div id="scrollControls" aria-label="Scroll controls">
-    <button class="scroll-btn" id="scrollUpBtn" title="Scroll atas">↑</button>
-    <button class="scroll-btn" id="scrollDownBtn" title="Scroll bawah">↓</button>
-  </div>
 
   <!-- ── CHAT BOTANI FLOATING BUTTON ── -->
   <div id="chatTeaser" style="position:fixed;bottom:86px;right:16px;z-index:1000;background:#2f4110;color:#F1ECE2;font-family:sans-serif;font-size:11px;font-weight:600;padding:8px 14px 8px 10px;border-radius:20px 20px 4px 20px;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;max-width:200px;line-height:1.4;cursor:pointer;animation:fadeIn .4s ease;">
@@ -1154,7 +1138,6 @@ body.chat-open {
       var fab   = document.getElementById('chatFab');
       var input = document.getElementById('chatInputField');
       var teaser = document.getElementById('chatTeaser');
-      var scrollControls = document.getElementById('scrollControls');
       if (!panel) return;
 
       panel.style.display = rambanChatOpen ? 'flex' : 'none';
@@ -1162,7 +1145,6 @@ body.chat-open {
 
       // Full-screen: hide FAB when chat open, show when closed
       if (fab) fab.style.display = rambanChatOpen ? 'none' : 'flex';
-      if (scrollControls) scrollControls.style.display = rambanChatOpen ? 'none' : 'flex';
 
       // Lock page scroll while popup chat is open to avoid touch-scroll conflicts on mobile
       if (rambanChatOpen) lockPageScroll();
@@ -1286,61 +1268,6 @@ body.chat-open {
     if (teaserEl) teaserEl.addEventListener('click', function(){ window.rambanToggleChat(); });
     if (teaserX)  teaserX.addEventListener('click', function(e){ e.stopPropagation(); teaserEl.style.display='none'; });
 
-    // Tap scroll up/down controls for main page
-    var scrollUpBtn = document.getElementById('scrollUpBtn');
-    var scrollDownBtn = document.getElementById('scrollDownBtn');
-    var scrollControls = document.getElementById('scrollControls');
-
-    function getActiveScrollTarget() {
-      var chatMsgs = document.getElementById('chatMsgs');
-      var historyPanel = document.getElementById('historyPanel');
-      var pickerModal = document.getElementById('pickerModal');
-      var modalBody = document.querySelector('#pickerModal > div');
-
-      if (rambanChatOpen && chatMsgs) return chatMsgs;
-      if (historyPanel && historyPanel.classList.contains('show')) return historyPanel;
-      if (pickerModal && !pickerModal.classList.contains('hidden') && modalBody) return modalBody;
-      return (document.scrollingElement || document.documentElement);
-    }
-
-    function smoothPageScroll(delta) {
-      var target = getActiveScrollTarget();
-      if (!target) return;
-      if (target === document.documentElement || target === document.body || target === document.scrollingElement) {
-        window.scrollBy({ top: delta, left: 0, behavior: 'smooth' });
-      } else {
-        target.scrollBy({ top: delta, left: 0, behavior: 'smooth' });
-      }
-    }
-
-    function bindTouchScrollButton(btn, delta) {
-      if (!btn) return;
-      var holdTimer = null;
-      btn.addEventListener('click', function(){ smoothPageScroll(delta); });
-      btn.addEventListener('touchstart', function(e){
-        e.preventDefault();
-        smoothPageScroll(delta);
-        holdTimer = setInterval(function(){ smoothPageScroll(delta); }, 220);
-      }, { passive: false });
-      btn.addEventListener('touchend', function(){ if (holdTimer) clearInterval(holdTimer); holdTimer = null; });
-      btn.addEventListener('touchcancel', function(){ if (holdTimer) clearInterval(holdTimer); holdTimer = null; });
-    }
-
-    bindTouchScrollButton(scrollUpBtn, -320);
-    bindTouchScrollButton(scrollDownBtn, 320);
-
-    // Ensure swipe scrolling is enabled on all major windows/features in mobile devices
-    function ensureTouchScrollable(el) {
-      if (!el) return;
-      el.style.touchAction = 'pan-y';
-      el.style.webkitOverflowScrolling = 'touch';
-    }
-
-    ensureTouchScrollable(document.scrollingElement || document.documentElement);
-    ensureTouchScrollable(document.getElementById('chatMsgs'));
-    ensureTouchScrollable(document.getElementById('historyPanel'));
-    ensureTouchScrollable(document.querySelector('#pickerModal > div'));
-
     // Fail-safe: ensure main page scroll is never stuck after chat toggles
     window.addEventListener('pageshow', function() {
       if (!rambanChatOpen) {
@@ -1348,40 +1275,6 @@ body.chat-open {
         document.body.style.top = '';
       }
     });
-
-    // Desktop wheel scroll uses native browser physics for smooth, natural behavior.
-
-    // Universal wheel support for all scrollable windows/panels
-    document.addEventListener('wheel', function(e) {
-      var target = e.target;
-      var chatMsgs = document.getElementById('chatMsgs');
-      var historyPanel = document.getElementById('historyPanel');
-      var modalBody = document.querySelector('#pickerModal > div');
-
-      function canScroll(el) {
-        return el && el.scrollHeight > el.clientHeight;
-      }
-
-      if (chatMsgs && target.closest('#chatPanel') && canScroll(chatMsgs)) {
-        chatMsgs.scrollTop += e.deltaY;
-        return;
-      }
-
-      if (historyPanel && historyPanel.classList.contains('show') && canScroll(historyPanel)) {
-        historyPanel.scrollTop += e.deltaY;
-        return;
-      }
-
-      if (modalBody && !document.getElementById('pickerModal').classList.contains('hidden') && canScroll(modalBody)) {
-        modalBody.scrollTop += e.deltaY;
-        return;
-      }
-
-      if (!rambanChatOpen) {
-        var root = document.scrollingElement || document.documentElement;
-        if (root) root.scrollTop += e.deltaY;
-      }
-    }, { passive: true });
 
     // Extra guard on first load: make sure page is not stuck in locked state
     document.body.classList.remove('chat-open');
