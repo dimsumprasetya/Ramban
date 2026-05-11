@@ -43,6 +43,14 @@ html, body {
   overscroll-behavior: none; /* Menggunakan 'none' secara absolut untuk x dan y */
 }
 
+body.chat-open {
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
+  left: 0;
+  right: 0;
+}
+
     /* Style untuk area hasil teks AI */
     .prose strong {
       color: #2f4110;
@@ -275,7 +283,7 @@ html, body {
     #chatPanel {
       position: fixed; z-index: 9500;
       right: 16px; bottom: 86px;
-      width: min(92vw, 390px); height: min(72vh, 620px);
+      width: min(92vw, 390px); height: min(72dvh, 620px);
       background: #F1ECE2;
       border: 1px solid #d9d2c4;
       border-radius: 14px;
@@ -291,7 +299,7 @@ html, body {
     @media (max-width: 640px) {
       #chatPanel {
         left: 12px; right: 12px; bottom: 80px;
-        width: auto; height: min(78vh, 640px);
+        width: auto; height: min(78dvh, 640px);
       }
     }
 
@@ -1101,6 +1109,20 @@ html, body {
     // ── CHAT: all functions use lazy DOM lookup ──
     var rambanChatOpen = false;
     var rambanChatHistory = [];
+    var rambanScrollY = 0;
+
+    function lockPageScroll() {
+      rambanScrollY = window.scrollY || window.pageYOffset || 0;
+      document.body.classList.add('chat-open');
+      document.body.style.top = '-' + rambanScrollY + 'px';
+    }
+
+    function unlockPageScroll() {
+      document.body.classList.remove('chat-open');
+      document.body.style.top = '';
+      window.scrollTo({ top: rambanScrollY, left: 0, behavior: 'auto' });
+    }
+
 
     window.rambanToggleChat = function() {
       rambanChatOpen = !rambanChatOpen;
@@ -1116,8 +1138,9 @@ html, body {
       // Full-screen: hide FAB when chat open, show when closed
       if (fab) fab.style.display = rambanChatOpen ? 'none' : 'flex';
 
-      // Lock body scroll to prevent background scroll when chat open
-      // Popup mode: biarkan halaman tetap natural, tanpa memaksa fixed body
+      // Lock page scroll while popup chat is open to avoid touch-scroll conflicts on mobile
+      if (rambanChatOpen) lockPageScroll();
+      else unlockPageScroll();
 
       if (teaser) teaser.style.display = 'none';
 
