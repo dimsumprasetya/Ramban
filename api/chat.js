@@ -44,6 +44,44 @@ Akhiri jawaban dengan emoji tanaman yang relevan.`;
 
     const trimmedHistory = Array.isArray(history) ? history.slice(-6) : [];
 
+
+    async function askGPT55() {
+      const openAIKey = process.env.OPENAI_API_KEY;
+      if (!openAIKey) throw new Error('OPENAI_API_KEY belum diatur');
+
+      const model = process.env.OPENAI_MODEL || 'gpt-5.5';
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        ...trimmedHistory
+          .filter(h => h && (h.role === 'user' || h.role === 'assistant'))
+          .map(h => ({ role: h.role, content: h.text })),
+        { role: 'user', content: String(message) }
+      ];
+
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${openAIKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: 500,
+          temperature: 0.7
+        })
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data?.error?.message || `GPT-5.5 error ${resp.status}`);
+      }
+
+      const text = data?.choices?.[0]?.message?.content;
+      if (!text) throw new Error('GPT-5.5 tidak mengembalikan konten');
+      return text;
+    }
+
     async function askCobuddy() {
       const openRouterKey = process.env.OPENROUTER_API_KEY;
       if (!openRouterKey) throw new Error('OPENROUTER_API_KEY belum diatur');
@@ -119,8 +157,15 @@ Akhiri jawaban dengan emoji tanaman yang relevan.`;
       return text;
     }
 
-    // ── Sistem saling mendukung: Cobuddy -> Gemini -> Wikipedia fallback ──
+    // ── Sistem saling mendukung: GPT-5.5 -> Cobuddy -> Gemini -> Wikipedia fallback ──
     const errors = [];
+
+    try {
+      const reply = await askGPT55();
+      return res.status(200).json({ reply, source: 'gpt-5.5', wikiContext: wikiContext || null });
+    } catch (e) {
+      errors.push(`gpt-5.5: ${e.message}`);
+    }
 
     try {
       const reply = await askCobuddy();
