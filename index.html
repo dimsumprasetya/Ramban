@@ -1128,14 +1128,17 @@ body.chat-open {
     var rambanChatOpen = false;
     var rambanChatHistory = [];
     var rambanScrollY = 0;
+    var isTouchLikeDevice = window.matchMedia('(pointer: coarse)').matches;
 
     function lockPageScroll() {
+      if (!isTouchLikeDevice) return;
       rambanScrollY = window.scrollY || window.pageYOffset || 0;
       document.body.classList.add('chat-open');
       document.body.style.top = '-' + rambanScrollY + 'px';
     }
 
     function unlockPageScroll() {
+      if (!isTouchLikeDevice) return;
       document.body.classList.remove('chat-open');
       document.body.style.top = '';
       window.scrollTo({ top: rambanScrollY, left: 0, behavior: 'auto' });
@@ -1341,6 +1344,38 @@ body.chat-open {
     });
 
     // Desktop wheel scroll uses native browser physics for smooth, natural behavior.
+
+    // Universal wheel support for all scrollable windows/panels
+    document.addEventListener('wheel', function(e) {
+      var target = e.target;
+      var chatMsgs = document.getElementById('chatMsgs');
+      var historyPanel = document.getElementById('historyPanel');
+      var modalBody = document.querySelector('#pickerModal > div');
+
+      function canScroll(el) {
+        return el && el.scrollHeight > el.clientHeight;
+      }
+
+      if (chatMsgs && target.closest('#chatPanel') && canScroll(chatMsgs)) {
+        chatMsgs.scrollTop += e.deltaY;
+        return;
+      }
+
+      if (historyPanel && historyPanel.classList.contains('show') && canScroll(historyPanel)) {
+        historyPanel.scrollTop += e.deltaY;
+        return;
+      }
+
+      if (modalBody && !document.getElementById('pickerModal').classList.contains('hidden') && canScroll(modalBody)) {
+        modalBody.scrollTop += e.deltaY;
+        return;
+      }
+
+      if (!rambanChatOpen) {
+        var root = document.scrollingElement || document.documentElement;
+        if (root) root.scrollTop += e.deltaY;
+      }
+    }, { passive: true });
 
     // Extra guard on first load: make sure page is not stuck in locked state
     document.body.classList.remove('chat-open');
