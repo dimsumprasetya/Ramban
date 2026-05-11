@@ -1339,6 +1339,17 @@ body.chat-open {
         document.body.style.top = '';
       }
     });
+
+    // Desktop: force-enable mouse wheel scrolling on main page
+    document.addEventListener('wheel', function(e) {
+      if (rambanChatOpen) return;
+      if (e.target && e.target.closest && e.target.closest('#chatPanel')) return;
+      window.scrollBy({ top: e.deltaY, left: 0, behavior: 'auto' });
+    }, { passive: true });
+
+    // Extra guard on first load: make sure page is not stuck in locked state
+    document.body.classList.remove('chat-open');
+    document.body.style.top = '';
   </script>
 </body>
 </html>
