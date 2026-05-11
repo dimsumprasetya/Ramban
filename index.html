@@ -416,6 +416,18 @@ body.chat-open {
     }
     .chat-qbtn:hover { background: rgba(47,65,16,.15); }
 
+    #scrollControls {
+      position: fixed; left: 14px; bottom: 24px; z-index: 1080;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .scroll-btn {
+      width: 42px; height: 42px; border-radius: 50%;
+      border: none; background: rgba(47,65,16,0.92); color: #F1ECE2;
+      font-size: 18px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,.28);
+    }
+    .scroll-btn:active { transform: scale(0.97); }
+
   </style>
 </head>
 <body class="min-h-screen relative flex flex-col items-center select-none">
@@ -1034,6 +1046,12 @@ body.chat-open {
     </div>
   </div>
 
+
+  <div id="scrollControls" aria-label="Scroll controls">
+    <button class="scroll-btn" id="scrollUpBtn" title="Scroll atas">↑</button>
+    <button class="scroll-btn" id="scrollDownBtn" title="Scroll bawah">↓</button>
+  </div>
+
   <!-- ── CHAT BOTANI FLOATING BUTTON ── -->
   <div id="chatTeaser" style="position:fixed;bottom:86px;right:16px;z-index:1000;background:#2f4110;color:#F1ECE2;font-family:sans-serif;font-size:11px;font-weight:600;padding:8px 14px 8px 10px;border-radius:20px 20px 4px 20px;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;max-width:200px;line-height:1.4;cursor:pointer;animation:fadeIn .4s ease;">
     🌿 <span>Punya pertanyaan soal tanaman? Tanya saya!</span>
@@ -1130,6 +1148,7 @@ body.chat-open {
       var fab   = document.getElementById('chatFab');
       var input = document.getElementById('chatInputField');
       var teaser = document.getElementById('chatTeaser');
+      var scrollControls = document.getElementById('scrollControls');
       if (!panel) return;
 
       panel.style.display = rambanChatOpen ? 'flex' : 'none';
@@ -1137,6 +1156,7 @@ body.chat-open {
 
       // Full-screen: hide FAB when chat open, show when closed
       if (fab) fab.style.display = rambanChatOpen ? 'none' : 'flex';
+      if (scrollControls) scrollControls.style.display = rambanChatOpen ? 'none' : 'flex';
 
       // Lock page scroll while popup chat is open to avoid touch-scroll conflicts on mobile
       if (rambanChatOpen) lockPageScroll();
@@ -1299,6 +1319,26 @@ body.chat-open {
     var teaserX  = document.getElementById('teaserClose');
     if (teaserEl) teaserEl.addEventListener('click', function(){ window.rambanToggleChat(); });
     if (teaserX)  teaserX.addEventListener('click', function(e){ e.stopPropagation(); teaserEl.style.display='none'; });
+
+    // Tap scroll up/down controls for main page
+    var scrollUpBtn = document.getElementById('scrollUpBtn');
+    var scrollDownBtn = document.getElementById('scrollDownBtn');
+    var scrollControls = document.getElementById('scrollControls');
+
+    function smoothPageScroll(delta) {
+      window.scrollBy({ top: delta, left: 0, behavior: 'smooth' });
+    }
+
+    if (scrollUpBtn) scrollUpBtn.addEventListener('click', function(){ smoothPageScroll(-320); });
+    if (scrollDownBtn) scrollDownBtn.addEventListener('click', function(){ smoothPageScroll(320); });
+
+    // Fail-safe: ensure main page scroll is never stuck after chat toggles
+    window.addEventListener('pageshow', function() {
+      if (!rambanChatOpen) {
+        document.body.classList.remove('chat-open');
+        document.body.style.top = '';
+      }
+    });
   </script>
 </body>
 </html>
