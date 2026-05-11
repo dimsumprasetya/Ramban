@@ -304,7 +304,8 @@ html, body {
   flex: 1; overflow-y: scroll; overflow-x: hidden;
   padding: 16px; display: flex; flex-direction: column; gap: 10px;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: none; /* Ubah ini menjadi none */
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none; /* tahan bounce horizontal */
   touch-action: pan-y;
   scroll-behavior: smooth;
   background: #f7f3eb;
@@ -1089,6 +1090,27 @@ html, body {
     // ── CHAT: all functions use lazy DOM lookup ──
     var rambanChatOpen = false;
     var rambanChatHistory = [];
+    var rambanPageScrollTop = 0;
+
+    function lockPageScroll() {
+      rambanPageScrollTop = window.scrollY || window.pageYOffset || 0;
+      document.body.style.position = 'fixed';
+      document.body.style.top = '-' + rambanPageScrollTop + 'px';
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function unlockPageScroll() {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, rambanPageScrollTop);
+    }
 
     window.rambanToggleChat = function() {
       rambanChatOpen = !rambanChatOpen;
@@ -1105,9 +1127,8 @@ html, body {
       if (fab) fab.style.display = rambanChatOpen ? 'none' : 'flex';
 
       // Lock body scroll to prevent background scroll when chat open
-      document.body.style.overflow = rambanChatOpen ? 'hidden' : '';
-      document.body.style.position = rambanChatOpen ? 'fixed' : '';
-      document.body.style.width = rambanChatOpen ? '100%' : '';
+      if (rambanChatOpen) lockPageScroll();
+      else unlockPageScroll();
 
       if (teaser) teaser.style.display = 'none';
 
@@ -1241,6 +1262,27 @@ html, body {
         if (!btn) return;
         window.rambanSendQuick(btn.getAttribute('data-q'));
       });
+    }
+
+
+    // Prevent pull-to-refresh from fighting chat scroll at top edge
+    var chatMsgsEl = document.getElementById('chatMsgs');
+    if (chatMsgsEl) {
+      var chatTouchStartY = 0;
+      chatMsgsEl.addEventListener('touchstart', function(e) {
+        if (!e.touches || !e.touches.length) return;
+        chatTouchStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      chatMsgsEl.addEventListener('touchmove', function(e) {
+        if (!rambanChatOpen || !e.touches || !e.touches.length) return;
+        var currentY = e.touches[0].clientY;
+        var pullingDown = currentY > chatTouchStartY;
+        var atTop = chatMsgsEl.scrollTop <= 0;
+        if (atTop && pullingDown) {
+          e.preventDefault();
+        }
+      }, { passive: false });
     }
 
     // Teaser: show after 3s if chat never used
