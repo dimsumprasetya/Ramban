@@ -296,13 +296,17 @@
       flex: 1; overflow-y: scroll; overflow-x: hidden; padding: 12px;
       display: flex; flex-direction: column; gap: 8px;
       -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
       overscroll-behavior-y: contain;
       max-height: 42vh;
       min-height: 100px;
       touch-action: pan-y;
       scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: #2f4110 transparent;
     }
+    .chat-msgs::-webkit-scrollbar { width: 4px; }
+    .chat-msgs::-webkit-scrollbar-track { background: transparent; }
+    .chat-msgs::-webkit-scrollbar-thumb { background: #2f4110; border-radius: 4px; }
     .chat-bubble {
       max-width: 85%; padding: 8px 12px; border-radius: 12px;
       font-size: 12px; line-height: 1.6;
@@ -318,10 +322,21 @@
     .chat-typing {
       display: none; align-self: flex-start;
       background: #fff; border: .5px solid #D6D1C6;
-      padding: 8px 14px; border-radius: 12px 12px 12px 3px;
-      font-size: 18px; letter-spacing: 2px; color: #8a9070;
+      padding: 10px 16px; border-radius: 12px 12px 12px 3px;
+      gap: 4px; align-items: center;
     }
-    .chat-typing.show { display: block; }
+    .chat-typing.show { display: flex; }
+    .chat-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #8a9070; display: inline-block;
+      animation: dotBounce 1.2s infinite ease-in-out;
+    }
+    .chat-dot:nth-child(2) { animation-delay: 0.2s; }
+    .chat-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dotBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
     .chat-input-row {
       display: flex; gap: 6px; padding: 10px 12px;
       border-top: .5px solid #D6D1C6; background: #F1ECE2;
@@ -983,14 +998,14 @@
       <div class="chat-hdr-icon">🌿</div>
       <div class="chat-hdr-info">
         <div class="chat-hdr-name">Ahli Botani AI</div>
-        <div class="chat-hdr-sub">Didukung Pl@ntNet × Wikipedia</div>
+        <div class="chat-hdr-sub">Chat Asisten Ramban</div>
       </div>
       <button class="chat-close" id="chatClose">✕</button>
     </div>
     <div class="chat-msgs" id="chatMsgs">
       <div class="chat-bubble bot">Halo! Saya asisten botani Ramban. Ada yang ingin Anda tanyakan tentang tanaman? 🌱</div>
     </div>
-    <div class="chat-typing" id="chatTyping">•••</div>
+    <div class="chat-typing" id="chatTyping"><span class="chat-dot"></span><span class="chat-dot"></span><span class="chat-dot"></span></div>
     <div class="chat-quickbtns" id="quickBtns">
       <div class="chat-qbtn" data-q="Apa tanaman yang cocok untuk dalam ruangan?">🏠 Tanaman indoor</div>
       <div class="chat-qbtn" data-q="Tanaman apa yang beracun untuk kucing?">🐱 Berbahaya untuk kucing</div>
@@ -1083,7 +1098,7 @@
       if (msgs) msgs.appendChild(ub);
 
       rambanChatHistory.push({ role: 'user', text: q });
-      if (typing) typing.style.display = 'block';
+      if (typing) { typing.style.display = 'flex'; typing.style.alignItems = 'center'; typing.style.gap = '4px'; }
       if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
       function addReply(text) {
