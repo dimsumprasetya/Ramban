@@ -1041,10 +1041,6 @@ body.chat-open {
 
 
   <!-- ── CHAT BOTANI FLOATING BUTTON ── -->
-  <div id="chatTeaser" style="position:fixed;bottom:86px;right:16px;z-index:1000;background:#2f4110;color:#F1ECE2;font-family:sans-serif;font-size:11px;font-weight:600;padding:8px 14px 8px 10px;border-radius:20px 20px 4px 20px;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;max-width:200px;line-height:1.4;cursor:pointer;animation:fadeIn .4s ease;">
-    💬 <span>Punya pertanyaan soal tanaman? Tanya saya!</span>
-    <span id="teaserClose" style="margin-left:4px;opacity:.6;font-size:14px">×</span>
-  </div>
   <button id="chatFab" onclick="window.rambanToggleChat()" title="Tanya Ahli Botani AI">💬</button>
 
   <!-- ── CHAT PANEL ── -->
@@ -1138,7 +1134,6 @@ body.chat-open {
       var panel = document.getElementById('chatPanel');
       var fab   = document.getElementById('chatFab');
       var input = document.getElementById('chatInputField');
-      var teaser = document.getElementById('chatTeaser');
       if (!panel) return;
 
       panel.style.display = rambanChatOpen ? 'flex' : 'none';
@@ -1150,8 +1145,6 @@ body.chat-open {
       // Lock page scroll while popup chat is open to avoid touch-scroll conflicts on mobile
       if (rambanChatOpen) lockPageScroll();
       else unlockPageScroll();
-
-      if (teaser) teaser.style.display = 'none';
 
       if (rambanChatOpen) {
         localStorage.setItem('ramban_chat_used', '1');
@@ -1255,19 +1248,6 @@ body.chat-open {
         window.rambanSendQuick(btn.getAttribute('data-q'));
       });
     }
-
-
-    // Teaser: show after 3s if chat never used
-    if (!localStorage.getItem('ramban_chat_used')) {
-      setTimeout(function(){
-        var t = document.getElementById('chatTeaser');
-        if (t) t.style.display = 'flex';
-      }, 3000);
-    }
-    var teaserEl = document.getElementById('chatTeaser');
-    var teaserX  = document.getElementById('teaserClose');
-    if (teaserEl) teaserEl.addEventListener('click', function(){ window.rambanToggleChat(); });
-    if (teaserX)  teaserX.addEventListener('click', function(e){ e.stopPropagation(); teaserEl.style.display='none'; });
 
     // Fail-safe: ensure main page scroll is never stuck after chat toggles
     window.addEventListener('pageshow', function() {
