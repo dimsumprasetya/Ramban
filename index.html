@@ -1266,6 +1266,26 @@
       });
     }
 
+    // Prevent pull-to-refresh from fighting chat scroll at top edge
+    var chatMsgsEl = document.getElementById('chatMsgs');
+    if (chatMsgsEl) {
+      var chatTouchStartY = 0;
+      chatMsgsEl.addEventListener('touchstart', function(e) {
+        if (!e.touches || !e.touches.length) return;
+        chatTouchStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      chatMsgsEl.addEventListener('touchmove', function(e) {
+        if (!rambanChatOpen || !e.touches || !e.touches.length) return;
+        var currentY = e.touches[0].clientY;
+        var pullingDown = currentY > chatTouchStartY;
+        var atTop = chatMsgsEl.scrollTop <= 0;
+        if (atTop && pullingDown) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+    }
+
     // Teaser: show after 3s if chat never used
     if (!localStorage.getItem('ramban_chat_used')) {
       setTimeout(function(){
