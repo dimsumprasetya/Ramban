@@ -211,7 +211,7 @@ body.chat-open {
     /* History panel */
     #historyPanel {
       display: none; position: fixed; inset: 0; z-index: 9000;
-      background: #3b4d19; overflow-y: scroll; padding: 20px 16px;
+      background: #3b4d19; overflow-y: auto; padding: 20px 16px;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
       touch-action: pan-y;
@@ -1368,6 +1368,18 @@ body.chat-open {
 
     bindTouchScrollButton(scrollUpBtn, -320);
     bindTouchScrollButton(scrollDownBtn, 320);
+
+    // Ensure swipe scrolling is enabled on all major windows/features in mobile devices
+    function ensureTouchScrollable(el) {
+      if (!el) return;
+      el.style.touchAction = 'pan-y';
+      el.style.webkitOverflowScrolling = 'touch';
+    }
+
+    ensureTouchScrollable(document.scrollingElement || document.documentElement);
+    ensureTouchScrollable(document.getElementById('chatMsgs'));
+    ensureTouchScrollable(document.getElementById('historyPanel'));
+    ensureTouchScrollable(document.querySelector('#pickerModal > div'));
 
     // Fail-safe: ensure main page scroll is never stuck after chat toggles
     window.addEventListener('pageshow', function() {
