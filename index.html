@@ -1264,15 +1264,7 @@ body.chat-open {
         return false;
       });
 
-      // Block iOS/Android hold-to-select on non-text elements
-      chatPanelEl.addEventListener('touchstart', function(e) {
-        // Allow default on input and bubbles (for text selection/keyboard)
-        var t = e.target;
-        if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON') return;
-        if (t.classList.contains('chat-bubble')) return;
-        // Prevent long-press on everything else (header, typing area, etc.)
-        e.stopPropagation();
-      }, { passive: true });
+      // Keep mobile swipe natural: do not intercept touchstart here.
     }
 
     // Wire send button & enter key
