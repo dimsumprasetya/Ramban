@@ -1,1259 +1,216 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Ramban App</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="manifest" href="site.webmanifest">
-  <meta name="theme-color" content="#2f4110">
-  
-  <!-- Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif'],
-          }
-        }
-      }
-    }
-  </script>
-
-  <style>
-    /* CSS Variables untuk Parallax */
-    :root {
-      --mouse-y: 0;
-      --scroll-y: 0;
-    }
-
-html, body {
-  font-family: 'Inter', sans-serif;
-  overflow-x: hidden;
-  background-color: #3b4d19;
-  color: #2b2b2b;
-  overscroll-behavior: none; /* Menggunakan 'none' secara absolut untuk x dan y */
-}
-
-    /* Style untuk area hasil teks AI */
-    .prose strong {
-      color: #2f4110;
-    }
-    
-    /* Animasi Fade In */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in {
-      animation: fadeIn 0.5s ease-out forwards;
-    }
-
-    /* Interaksi Image Hover saat Idle */
-    .is-idle .photo-img {
-      transition: all 0.7s ease;
-    }
-    .is-idle:hover .photo-img {
-      transform: scale(1.05);
-    }
-    .is-idle .photo-overlay {
-      opacity: 1;
-    }
-    .is-idle {
-      cursor: pointer;
-    }
-    .is-idle:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 25px 60px rgba(0,0,0,0.5);
-    }
-
-    /* ── Responsive fixes ── */
-
-    /* Fluid title: clamp antara 72px (kecil) dan 180px (besar) */
-    .ramban-title {
-      font-size: clamp(72px, 22vw, 180px) !important;
-    }
-
-    /* Photo card: fluid antara layar kecil dan besar */
-    #photoContainer {
-      max-width: min(75vw, 320px) !important;
-    }
-
-    /* Results box: full-width di HP kecil */
-    #resultsBox {
-      padding: clamp(1rem, 5vw, 2rem) !important;
-    }
-
-    /* Reset button tidak keluar area */
-    #resetBtn {
-      position: static !important;
-      margin-bottom: 1rem;
-      display: block;
-      margin-left: auto;
-    }
-
-    /* Modal: max height dengan scroll bila konten panjang */
-    #pickerModal > div {
-      max-height: 90vh;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
-    }
-
-    /* Slot thumbnail: fluid agar muat 3 kolom di modal sempit */
-    .slot-box {
-      width: clamp(64px, 20vw, 88px) !important;
-      height: clamp(64px, 20vw, 88px) !important;
-    }
-
-    /* Touch target minimum 44px untuk semua tombol */
-    button {
-      min-height: 44px;
-    }
-    #btnCancel {
-      min-height: 40px;
-    }
-
-    /* Footer teks minimum 10px */
-    footer p {
-      font-size: max(10px, 0.625rem) !important;
-    }
-
-    /* Safe area untuk notch/punch-hole */
-    body {
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-    }
-    #pickerModal {
-      padding-left: max(1rem, env(safe-area-inset-left));
-      padding-right: max(1rem, env(safe-area-inset-right));
-      padding-bottom: max(1rem, env(safe-area-inset-bottom));
-    }
-
-    /* Tablet (768px+): beri padding lebih */
-    @media (min-width: 768px) {
-      .ramban-title {
-        font-size: clamp(140px, 15vw, 200px) !important;
-      }
-      #photoContainer {
-        max-width: 340px !important;
-      }
-      #resultsBox {
-        padding: 2.5rem !important;
-      }
-      #pickerModal > div {
-        max-width: 420px;
-      }
-    }
-
-    /* Desktop (1024px+): cap agar tidak terlalu lebar */
-    @media (min-width: 1024px) {
-      .ramban-title {
-        font-size: 190px !important;
-      }
-      #photoContainer {
-        max-width: 360px !important;
-      }
-    }
-
-    /* HP sangat kecil (320px): turunkan spacing */
-    @media (max-width: 360px) {
-      .ramban-title {
-        font-size: 72px !important;
-      }
-      #photoContainer {
-        max-width: 220px !important;
-      }
-      #resultsBox {
-        padding: 1rem !important;
-      }
-      .slot-box {
-        width: 60px !important;
-        height: 60px !important;
-      }
-    }
-
-
-
-    /* Toxicity badge */
-    #toxicBadge {
-      display: none;
-      position: relative; z-index: 100;
-      background: #c0392b; color: #fff;
-      font-family: sans-serif; font-size: 12px; font-weight: 700;
-      padding: 10px 16px; margin-bottom: 12px;
-      border-radius: 4px;
-      align-items: center; gap: 8px;
-      animation: pulse 1.5s infinite;
-    }
-    #toxicBadge.show { display: flex; }
-    @keyframes pulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0.5); }
-      50% { box-shadow: 0 0 0 6px rgba(192,57,43,0); }
-    }
-
-    /* History panel */
-    #historyPanel {
-      display: none; position: fixed; inset: 0; z-index: 9000;
-      background: #3b4d19; overflow-y: scroll; padding: 20px 16px;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
-      touch-action: pan-y;
-    }
-    #historyPanel.show { display: block; }
-    .hist-item {
-      background: #F1ECE2; border-radius: 4px; padding: 10px 12px;
-      margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
-      cursor: pointer; border-left: 4px solid #2f4110;
-    }
-    .hist-item.toxic { border-left-color: #c0392b; }
-    .hist-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
-    .hist-info { flex: 1; min-width: 0; }
-    .hist-name { font-size: 13px; font-weight: 600; color: #2f4110; }
-    .hist-latin { font-size: 11px; color: #888; font-style: italic; }
-    .hist-date { font-size: 10px; color: #aaa; margin-top: 2px; }
-
-
-    /* ── Disclaimer Popup ── */
-    #disclaimerPopup {
-      position: fixed; inset: 0; z-index: 99999;
-      background: rgba(30,40,10,0.96);
-      display: flex; align-items: center; justify-content: center;
-      padding: 24px; font-family: sans-serif;
-    }
-        .disc-box {
-      background: #F1ECE2; border-top: 6px solid #2f4110;
-      border-radius: 4px; padding: 28px 24px; max-width: 360px; width: 100%;
-      text-align: center;
-    }
-    .disc-logo {
-      font-family: Georgia, serif; font-size: 42px; font-weight: 700;
-      color: #2f4110; line-height: 1; margin-bottom: 4px; letter-spacing: -2px;
-    }
-    .disc-tagline {
-      font-size: 10px; font-weight: 700; letter-spacing: 2px;
-      text-transform: uppercase; color: #8a9070; margin-bottom: 20px;
-    }
-    .disc-title {
-      font-size: 13px; font-weight: 700; color: #2f4110;
-      margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;
-    }
-    .disc-text {
-      font-size: 12px; color: #555; line-height: 1.7; margin-bottom: 20px;
-    }
-    .disc-text strong { color: #c0392b; }
-    .disc-agree {
-      width: 100%; background: #2f4110; color: #F1ECE2;
-      border: none; padding: 13px; font-size: 13px; font-weight: 700;
-      letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
-      border-radius: 3px; transition: background .2s;
-    }
-    .disc-agree:hover { background: #1a2509; }
-    .disc-note {
-      font-size: 10px; color: #aaa; margin-top: 10px; line-height: 1.5;
-    }
-
-    /* ── Chat Botani ── */
-    #chatFab {
-      position: fixed; bottom: 24px; right: 20px; z-index: 1100;
-      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
-      width: 52px; height: 52px; border-radius: 50%;
-      background: #2f4110; color: #F1ECE2;
-      border: none; cursor: pointer; font-size: 22px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      display: flex; align-items: center; justify-content: center;
-      transition: transform .2s, box-shadow .2s;
-    }
-    #chatFab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.4); }
-    #chatPanel {
-      position: fixed; inset: 0; z-index: 9500;
-      width: 100vw; max-width: 100vw;
-      background: #F1ECE2;
-      border-top: none;
-      display: none; flex-direction: column;
-      max-height: 100vh; height: 100vh;
-      font-family: sans-serif;
-      overflow: hidden;
-    }
-    #chatPanel.open { display: flex; }
-    .chat-hdr {
-      background: #2f4110; color: #F1ECE2;
-      padding: 14px 16px;
-      padding-top: max(14px, env(safe-area-inset-top));
-      display: flex; align-items: center; gap: 12px;
-      flex-shrink: 0;
-    }
-    .chat-hdr-icon { font-size: 22px; }
-    .chat-hdr-info { flex: 1; }
-    .chat-hdr-name { font-size: 15px; font-weight: 700; }
-    .chat-hdr-sub { font-size: 11px; opacity: .7; }
-    .chat-close {
-      background: rgba(255,255,255,0.15); border: none; color: #F1ECE2;
-      font-size: 14px; font-weight: 700; cursor: pointer;
-      padding: 6px 14px; border-radius: 20px;
-      letter-spacing: .5px;
-    }
-.chat-msgs {
-  flex: 1; overflow-y: scroll; overflow-x: hidden;
-  padding: 16px; display: flex; flex-direction: column; gap: 10px;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: none; /* Ubah ini menjadi none */
-  touch-action: pan-y;
-  scroll-behavior: smooth;
-  background: #f7f3eb;
-}
-    }
-    .chat-msgs::-webkit-scrollbar { width: 3px; }
-    .chat-msgs::-webkit-scrollbar-track { background: transparent; }
-    .chat-msgs::-webkit-scrollbar-thumb { background: #2f4110; border-radius: 4px; }
-    .chat-bubble {
-      max-width: 82%; padding: 10px 14px; border-radius: 14px;
-      font-size: 13px; line-height: 1.65;
-    }
-    .chat-bubble.bot {
-      background: #fff; color: #2b2b2b; border-bottom-left-radius: 3px;
-      align-self: flex-start; border: .5px solid #D6D1C6;
-    }
-    .chat-bubble.user {
-      background: #2f4110; color: #F1ECE2;
-      border-bottom-right-radius: 3px; align-self: flex-end;
-    }
-    /* Disable hold/long-press context menu inside chat */
-    #chatPanel, #chatPanel * {
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-    /* But allow text selection in chat bubbles for copy */
-    .chat-bubble {
-      -webkit-user-select: text;
-      user-select: text;
-      -webkit-touch-callout: default;
-    }
-    /* Input stays fully interactive */
-    #chatInputField {
-      -webkit-user-select: text !important;
-      user-select: text !important;
-      -webkit-touch-callout: default !important;
-      touch-action: manipulation;
-    }
-
-    .chat-typing {
-      display: none; align-self: flex-start;
-      background: #fff; border: .5px solid #D6D1C6;
-      padding: 10px 16px; border-radius: 12px 12px 12px 3px;
-      gap: 4px; align-items: center;
-    }
-    .chat-typing.show { display: flex; }
-    .chat-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: #8a9070; display: inline-block;
-      animation: dotBounce 1.2s infinite ease-in-out;
-    }
-    .chat-dot:nth-child(2) { animation-delay: 0.2s; }
-    .chat-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes dotBounce {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-      30% { transform: translateY(-6px); opacity: 1; }
-    }
-    .chat-input-row {
-      display: flex; gap: 8px; padding: 12px 16px;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
-      border-top: 1px solid #D6D1C6; background: #F1ECE2;
-      flex-shrink: 0;
-    }
-    .chat-input {
-      flex: 1; border: 1px solid #D6D1C6; border-radius: 20px;
-      padding: 8px 14px; font-size: 12px; font-family: sans-serif;
-      background: #fff; outline: none; color: #2b2b2b;
-    }
-    .chat-input:focus { border-color: #2f4110; }
-    .chat-send {
-      background: #2f4110; color: #F1ECE2; border: none;
-      border-radius: 50%; width: 36px; height: 36px;
-      cursor: pointer; font-size: 16px; display: flex;
-      align-items: center; justify-content: center;
-      flex-shrink: 0; transition: background .2s;
-    }
-    .chat-send:hover { background: #1a2509; }
-    .chat-quickbtns {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      padding: 8px 16px 12px; background: #F1ECE2;
-      border-top: .5px solid #D6D1C6; flex-shrink: 0;
-    }
-    .chat-qbtn {
-      background: rgba(47,65,16,.08); border: .5px solid rgba(47,65,16,.2);
-      border-radius: 12px; padding: 4px 10px; font-size: 10px;
-      color: #2f4110; cursor: pointer; font-weight: 600;
-      transition: background .15s;
-    }
-    .chat-qbtn:hover { background: rgba(47,65,16,.15); }
-
-  </style>
-</head>
-<body class="min-h-screen relative flex flex-col items-center select-none">
-
-  <!-- Background Krem -->
-  <div 
-    class="absolute top-0 left-0 w-full h-[50vh] bg-[#F1ECE2] z-0 transition-transform duration-200 ease-out scale-[1.1]" 
-    style="background-image: radial-gradient(#D6D1C6 1.5px, transparent 1.5px); background-size: 10px 10px; transform: translateY(calc(var(--mouse-y) * 8px + var(--scroll-y) * 0.25px));">
-  </div>
-
-  <!-- Top Corner Decor Left -->
-  <svg class="absolute top-4 left-4 z-10 transition-transform duration-200 ease-out" 
-       style="transform: translateY(calc(var(--mouse-y) * -3px + var(--scroll-y) * 0.1px));" 
-       width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 3v18M3 12h18M5.5 5.5l13 13M5.5 18.5l13-13"/>
-    <path d="M12 9a3 3 0 0 1 3 3M12 15a3 3 0 0 1-3-3M9 12a3 3 0 0 1 3-3M15 12a3 3 0 0 1-3-3"/>
-  </svg>
-
-  <!-- Top Corner Decor Right -->
-  <svg class="absolute top-4 right-4 z-10 transition-transform duration-200 ease-out" 
-       style="transform: scaleX(-1) translateY(calc(var(--mouse-y) * -3px + var(--scroll-y) * 0.1px));" 
-       width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 3v18M3 12h18M5.5 5.5l13 13M5.5 18.5l13-13"/>
-    <path d="M12 9a3 3 0 0 1 3 3M12 15a3 3 0 0 1-3-3M9 12a3 3 0 0 1 3-3M15 12a3 3 0 0 1-3-3"/>
-  </svg>
-
-  <!-- Container Utama (Judul + Foto) -->
-  <div id="heroSection" class="relative z-10 w-full max-w-4xl flex flex-col items-center pt-20 sm:pt-28">
-    
-    <!-- Giant Typography -->
-    <h1 
-      class="ramban-title font-bold text-[#2f4110] tracking-tighter leading-[0.7] pointer-events-none transition-transform duration-300 ease-out relative z-30" 
-      style="font-family: 'Georgia', 'Times New Roman', serif; transform: scaleY(1.1) translateY(calc(var(--mouse-y) * -6px + var(--scroll-y) * 0.2px));">
-      Ramban
-    </h1>
-
-    <!-- Photo Container -->
-    <div id="photoSection"
-      class="relative z-20 w-full flex justify-center transition-transform duration-200 ease-out -mt-[3vw] sm:-mt-[1.5rem]" 
-      style="transform: translateY(calc(var(--mouse-y) * 8px + var(--scroll-y) * 0.05px));">
-      
-      <div id="photoContainer" class="is-idle relative w-full max-w-[280px] sm:max-w-[320px] aspect-[3/4] bg-white p-2 shadow-[0_20px_50px_rgba(0,0,0,0.4)] transition-all duration-300">
-        <div class="w-full h-full overflow-hidden bg-[#F1ECE2] relative">
-          
-          <img id="photoPreview" 
-               src="https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800&auto=format&fit=crop" 
-               alt="Subject" 
-               class="photo-img w-full h-full object-cover transition-all duration-700 sepia-[0.35] brightness-[1.15] contrast-95 saturate-[0.7]">
-          
-          <!-- Idle Overlay Guide -->
-          <div id="idleOverlay" class="photo-overlay absolute inset-0 bg-black/10 flex flex-col items-center justify-center transition-opacity duration-300">
-            <span class="bg-[#F1ECE2] text-[#2f4110] px-5 py-2 rounded-sm font-bold shadow-lg text-sm tracking-wider uppercase">Tap to Capture</span>
-          </div>
-
-          <!-- Loading Overlay -->
-          <div id="loadingOverlay" class="hidden absolute inset-0 bg-[#F1ECE2]/80 backdrop-blur-[2px] flex-col items-center justify-center" style="z-index:300;">
-            <svg class="animate-spin h-10 w-10 text-[#2f4110]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="mt-4 font-bold tracking-widest text-[#2f4110] text-[10px] uppercase text-center px-4">
-              Menganalisis Tanaman...
-            </span>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <main class="relative z-20 w-full max-w-4xl flex-1 flex flex-col items-center px-4 pb-16">
-    <!-- Hidden Camera Input -->
-    <!-- Gallery input only -->
-    <input type="file" accept="image/*" id="galleryInput" class="hidden" multiple />
-
-
-
-    <!-- History Panel -->
-    <div id="historyPanel">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <h2 style="color:#F1ECE2;font-family:Georgia,serif;font-size:20px;margin:0;">📋 Riwayat Pindaian</h2>
-        <button onclick="closeHistory()" style="background:rgba(241,236,226,0.15);color:#F1ECE2;border:none;padding:6px 14px;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;font-family:sans-serif;">✕ Tutup</button>
-      </div>
-      <div id="historyList"></div>
-      <button onclick="clearHistory()" style="width:100%;margin-top:16px;background:rgba(192,57,43,0.2);color:#e74c3c;border:1px solid rgba(192,57,43,0.3);padding:10px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;font-family:sans-serif;letter-spacing:1px;">🗑️ HAPUS SEMUA RIWAYAT</button>
-    </div>
-
-    <!-- Results / Editorial Box -->
-    <div id="resultsBox" class="hidden mt-10 w-full max-w-md bg-[#F1ECE2] shadow-2xl text-[#2b2b2b] text-sm leading-relaxed border-t-8 border-[#2f4110] animate-fade-in transition-transform duration-300 ease-out" 
-         style="transform: translateY(calc(var(--mouse-y) * 4px));">
-      
-      <button id="resetBtn" class="bg-[#2f4110] text-[#F1ECE2] px-4 py-2 font-bold text-xs uppercase tracking-wider hover:bg-[#1a2509] transition-colors mb-4">
-        Cari Lainnya
-      </button>
-      
-      <div class="flex flex-col">
-        <div id="toxicBadge">
-          <span style="font-size:20px">⚠️</span>
-          <span>PERINGATAN: Tanaman ini mengandung racun atau iritan. Jauhkan dari anak-anak dan hewan peliharaan!</span>
-        </div>
-        <span class="text-[10px] uppercase tracking-widest opacity-60 mb-4 font-bold">Identifikasi Tanaman:</span>
-        <div id="resultsContent" class="prose prose-sm font-serif text-[#2b2b2b]">
-          <!-- Teks akan dirender disini menggunakan JavaScript -->
-        </div>
-      </div>
-    </div>
-
-    <!-- Camera / Gallery Picker Modal (centered) -->
-    <div id="pickerModal" class="hidden fixed inset-0 flex items-center justify-center px-4" style="z-index:500;background:rgba(0,0,0,0.6)" style="background: rgba(0,0,0,0.6)">
-      <div class="w-full max-w-sm bg-[#F1ECE2] shadow-2xl overflow-hidden" style="border-radius: 6px;">
-        <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#2f4110]/60 pt-5 pb-3 px-6 border-b border-[#D6D1C6]">Pilih Sumber Gambar</p>
-
-        <!-- 3 Slot Foto — tap untuk buka kamera langsung -->
-        <div class="px-4 py-5 border-b border-[#D6D1C6]">
-          <p class="text-[10px] uppercase tracking-widest text-[#2f4110]/50 text-center mb-4 font-bold">Tap kotak untuk foto tanaman</p>
-          <div style="display:flex; gap:10px; justify-content:center;">
-
-            <div class="flex flex-col items-center gap-1">
-              <div id="slot1" onclick="slotTap(0)" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 transition-transform" style="border-radius:6px">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.35"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <img id="thumb1" class="hidden absolute inset-0 w-full h-full object-cover" />
-                <button id="del1" onclick="event.stopPropagation();removeSlot(0)" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[9px] w-5 h-5 items-center justify-center font-bold" style="border-radius:0 6px 0 4px;display:none">✕</button>
-              </div>
-              <span class="text-[9px] text-[#2f4110]/40 font-bold uppercase tracking-wide">Foto 1</span>
-            </div>
-
-            <div class="flex flex-col items-center gap-1">
-              <div id="slot2" onclick="slotTap(1)" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 transition-transform" style="border-radius:6px">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.35"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <img id="thumb2" class="hidden absolute inset-0 w-full h-full object-cover" />
-                <button id="del2" onclick="event.stopPropagation();removeSlot(1)" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[9px] w-5 h-5 items-center justify-center font-bold" style="border-radius:0 6px 0 4px;display:none">✕</button>
-              </div>
-              <span class="text-[9px] text-[#2f4110]/40 font-bold uppercase tracking-wide">Foto 2</span>
-            </div>
-
-            <div class="flex flex-col items-center gap-1">
-              <div id="slot3" onclick="slotTap(2)" class="slot-box w-20 h-20 border-2 border-dashed border-[#2f4110]/30 flex items-center justify-center relative overflow-hidden cursor-pointer active:scale-95 transition-transform" style="border-radius:6px">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f4110" stroke-width="1.5" opacity="0.35"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                <img id="thumb3" class="hidden absolute inset-0 w-full h-full object-cover" />
-                <button id="del3" onclick="event.stopPropagation();removeSlot(2)" class="hidden absolute top-0 right-0 bg-red-500 text-white text-[9px] w-5 h-5 items-center justify-center font-bold" style="border-radius:0 6px 0 4px;display:none">✕</button>
-              </div>
-              <span class="text-[9px] text-[#2f4110]/40 font-bold uppercase tracking-wide">Foto 3</span>
-            </div>
-
-          </div>
-        </div>
-
-        <button id="btnGallery" class="w-full py-4 text-sm font-semibold text-[#2f4110] active:bg-[#E5E0D6] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]" style="-webkit-tap-highlight-color:rgba(0,0,0,0.08)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          Pilih dari Galeri
-        </button>
-        <button id="btnIdentify" class="hidden w-full py-4 text-sm font-bold text-[#F1ECE2] bg-[#2f4110] active:bg-[#1a2509] transition-colors flex items-center justify-center gap-3 border-b border-[#D6D1C6]" style="-webkit-tap-highlight-color:rgba(0,0,0,0.08)">
-          ✦ Identifikasi Sekarang
-        </button>
-        <button id="btnCancel" class="w-full py-3 text-xs text-[#2f4110]/50 active:bg-[#E5E0D6] transition-colors" style="-webkit-tap-highlight-color:rgba(0,0,0,0.08)">Batal</button>
-      </div>
-    </div>
-  <!-- Offline indicator -->
-  <div id="offlineBar" class="hidden fixed top-0 left-0 right-0 text-white text-center text-xs font-bold py-2 px-4" style="z-index:2000;background:#d97706;" style="font-family:sans-serif;">
-    📡 Tidak ada koneksi. Foto akan diidentifikasi otomatis saat online kembali.
-  </div>
-
-  </main>
-
-  <!-- Side Barcode Decor -->
-  <div class="hidden sm:block absolute right-12 top-[50%] opacity-90 transition-transform duration-200 ease-out" 
-       style="transform: translateY(calc(-50% + var(--mouse-y) * 10px + var(--scroll-y) * 0.15px));">
-    <div class="bg-[#F1ECE2] p-2 shadow-sm">
-      <svg width="24" height="80" viewBox="0 0 24 80" fill="#2b2b2b">
-        <rect x="2" y="0" width="2" height="80" />
-        <rect x="6" y="0" width="4" height="80" />
-        <rect x="12" y="0" width="1" height="80" />
-        <rect x="15" y="0" width="3" height="80" />
-        <rect x="20" y="0" width="2" height="80" />
-      </svg>
-    </div>
-  </div>
-
-
-
-  <!-- Footer Area with Disclaimer -->
-  <!-- History & offline controls -->
-  <div class="relative z-20 w-full max-w-md px-4 mb-4 flex gap-2">
-    <button onclick="openHistory()" class="flex-1 bg-[#F1ECE2]/10 text-[#F1ECE2] border border-[#F1ECE2]/20 py-2 px-3 text-xs font-bold uppercase tracking-wider hover:bg-[#F1ECE2]/20 transition-colors" style="font-family:sans-serif;">
-      📋 Riwayat
-    </button>
-    <div id="offlineQueueBtn" class="hidden flex-1 bg-yellow-600/80 text-white border border-yellow-400/30 py-2 px-3 text-xs font-bold uppercase tracking-wider text-center cursor-pointer" onclick="processOfflineQueue()" style="font-family:sans-serif;">
-      📡 Antrean Offline
-    </div>
-  </div>
-
-  <footer class="relative z-20 w-full max-w-md text-center px-6 pb-8 mt-auto">
-    <div class="border-t border-[#F1ECE2]/10 pt-4 flex flex-col gap-2">
-      <p class="text-[#F1ECE2]/40 text-[10px] tracking-widest uppercase">
-        created by Pijak Bumi Learning
-      </p>
-      <p id="disclaimerStatus" class="text-[#F1ECE2]/50 text-[10px] leading-relaxed font-sans">
-        ✓ Disclaimer telah disetujui
-      </p>
-      <button onclick="window.showDisclaimerAgain()"
-        class="text-[#F1ECE2]/40 text-[10px] underline font-sans hover:text-[#F1ECE2]/70 transition-colors cursor-pointer bg-transparent border-none">
-        Baca ulang disclaimer
-      </button>
-    </div>
-  </footer>
-
-  <!-- Application Logic -->
-  <script>
-
-    // --- DOM Elements ---
-    const rootStyle = document.documentElement.style;
-    const photoContainer = document.getElementById('photoContainer');
-    const photoPreview = document.getElementById('photoPreview');
-    const galleryInput = document.getElementById('galleryInput');
-    const pickerModal = document.getElementById('pickerModal');
-    const btnGallery = document.getElementById('btnGallery');
-    const btnCancel = document.getElementById('btnCancel');
-    const btnIdentify = document.getElementById('btnIdentify');
-    const idleOverlay = document.getElementById('idleOverlay');
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const resultsBox = document.getElementById('resultsBox');
-    const resultsContent = document.getElementById('resultsContent');
-    const resetBtn = document.getElementById('resetBtn');
-    const heroSection = document.getElementById('heroSection');
-    const toxicBadge = document.getElementById('toxicBadge');
-    const offlineBar = document.getElementById('offlineBar');
-    const offlineQueueBtn = document.getElementById('offlineQueueBtn');
-
-    // --- State ---
-    let status = 'idle';
-    let collectedImages = [];
-    let offlineQueue = JSON.parse(localStorage.getItem('ramban_offline_queue') || '[]');
-
-    // --- Parallax ---
-    window.addEventListener('mousemove', (e) => {
-      rootStyle.setProperty('--mouse-y', (e.clientY / window.innerHeight - 0.5) * 2);
-    });
-    window.addEventListener('deviceorientation', (e) => {
-      if (!e.beta) return;
-      rootStyle.setProperty('--mouse-y', Math.max(-1, Math.min(1, (e.beta - 60) / 45)));
-    });
-    window.addEventListener('scroll', () => {
-      rootStyle.setProperty('--scroll-y', window.scrollY);
-    }, { passive: true });
-
-    // --- Offline detection ---
-    const checkOnline = () => {
-      const online = navigator.onLine;
-      offlineBar.classList.toggle('hidden', online);
-      if (offlineQueue.length > 0 && !online) {
-        offlineQueueBtn.classList.remove('hidden');
-        offlineQueueBtn.textContent = `📡 Antrean (${offlineQueue.length})`;
-      } else {
-        offlineQueueBtn.classList.add('hidden');
-      }
-    };
-    window.addEventListener('online', () => { checkOnline(); processOfflineQueue(); });
-    window.addEventListener('offline', checkOnline);
-    checkOnline();
-
-    // --- UI Update ---
-    function updateUI() {
-      loadingOverlay.classList.remove('flex');
-      loadingOverlay.classList.add('hidden');
-      resultsBox.classList.add('hidden');
-      idleOverlay.style.display = 'none';
-      photoContainer.classList.remove('is-idle');
-      toxicBadge.classList.remove('show');
-
-      if (status === 'idle') {
-        photoContainer.classList.add('is-idle');
-        idleOverlay.style.display = 'flex';
-        heroSection.style.display = '';
-        if (collectedImages.length === 0) {
-          photoPreview.src = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800&auto=format&fit=crop";
-        }
-      } else if (status === 'loading') {
-        loadingOverlay.classList.remove('hidden');
-        loadingOverlay.classList.add('flex');
-      } else if (status === 'success') {
-        heroSection.style.display = 'none';
-        resultsBox.classList.remove('hidden');
-      }
-    }
-
-    // --- Thumbnail Slots ---
-    const thumbEls = [
-      document.getElementById('thumb1'),
-      document.getElementById('thumb2'),
-      document.getElementById('thumb3'),
-    ];
-    const delBtns = [
-      document.getElementById('del1'),
-      document.getElementById('del2'),
-      document.getElementById('del3'),
-    ];
-    const slots = [
-      document.getElementById('slot1'),
-      document.getElementById('slot2'),
-      document.getElementById('slot3'),
-    ];
-
-    function refreshSlots() {
-      for (let i = 0; i < 3; i++) {
-        if (collectedImages[i]) {
-          thumbEls[i].src = collectedImages[i];
-          thumbEls[i].classList.remove('hidden');
-          delBtns[i].style.display = 'flex';
-          slots[i].style.borderStyle = 'solid';
-          slots[i].style.borderColor = '#2f4110';
-        } else {
-          thumbEls[i].src = '';
-          thumbEls[i].classList.add('hidden');
-          delBtns[i].style.display = 'none';
-          slots[i].style.borderStyle = 'dashed';
-          slots[i].style.borderColor = 'rgba(47,65,16,0.3)';
-        }
-      }
-      if (collectedImages.length > 0) {
-        btnIdentify.classList.remove('hidden');
-        photoPreview.src = collectedImages[collectedImages.length - 1];
-      } else {
-        btnIdentify.classList.add('hidden');
-      }
-    }
-
-    delBtns.forEach((btn, i) => {
-      btn.addEventListener('click', (e) => { e.stopPropagation(); collectedImages.splice(i, 1); refreshSlots(); });
-    });
-
-    // --- Global slot tap → langsung buka kamera ---
-    window.slotTap = function(i) {
-      if (collectedImages[i]) return;
-      closePicker();
-      setTimeout(() => triggerCamera(), 100);
-    };
-
-    window.removeSlot = function(i) {
-      collectedImages.splice(i, 1);
-      refreshSlots();
-    };
-
-    // --- Dynamic input factory ---
-    function triggerCamera() {
-      const old = document.getElementById('_dynCam');
-      if (old) old.remove();
-      const inp = document.createElement('input');
-      inp.type = 'file'; inp.id = '_dynCam'; inp.accept = 'image/*';
-      inp.setAttribute('capture', 'environment');
-      inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;';
-      document.body.appendChild(inp);
-      inp.addEventListener('change', async (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-          await handleFileAdd(file);
-          refreshSlots();
-        }
-        inp.remove();
-        window.removeEventListener('focus', onFocus);
-        // Buka modal lagi jika masih ada slot kosong
-        if (collectedImages.length < 3) {
-          setTimeout(() => openPicker(), 200);
-        }
-      });
-      // Cancel handler — user tekan back tanpa pilih foto
-      const onFocus = () => {
-        setTimeout(() => {
-          if (inp.parentNode) { inp.remove(); openPicker(); }
-          window.removeEventListener('focus', onFocus);
-        }, 500);
-      };
-      window.addEventListener('focus', onFocus);
-      setTimeout(() => inp.click(), 50);
-    }
-
-    function triggerGallery() {
-      const old = document.getElementById('_dynGal');
-      if (old) old.remove();
-      const inp = document.createElement('input');
-      inp.type = 'file'; inp.id = '_dynGal'; inp.accept = 'image/*'; inp.multiple = true;
-      inp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;';
-      document.body.appendChild(inp);
-      inp.addEventListener('change', async (e) => {
-        const files = Array.from(e.target.files || []).slice(0, 3 - collectedImages.length);
-        for (const f of files) await handleFileAdd(f);
-        inp.remove();
-        refreshSlots();
-        // Buka modal lagi jika masih ada slot kosong
-        if (collectedImages.length < 3) {
-          setTimeout(() => openPicker(), 200);
-        }
-      });
-      // Cancel handler
-      const onFocus = () => {
-        setTimeout(() => {
-          if (inp.parentNode) { inp.remove(); openPicker(); }
-          window.removeEventListener('focus', onFocus);
-        }, 500);
-      };
-      window.addEventListener('focus', onFocus);
-      setTimeout(() => inp.click(), 50);
-    }
-
-    // --- Picker Modal ---
-    const openPicker = () => {
-      if (status === 'idle' || status === 'error') { refreshSlots(); pickerModal.classList.remove('hidden'); }
-    };
-    const closePicker = () => pickerModal.classList.add('hidden');
-
-    photoContainer.addEventListener('click', openPicker);
-    btnCancel.addEventListener('click', closePicker);
-    pickerModal.addEventListener('click', (e) => { if (e.target === pickerModal) closePicker(); });
-    btnGallery.addEventListener('click', () => { if (collectedImages.length >= 3) return; triggerGallery(); });
-    btnIdentify.addEventListener('click', () => { closePicker(); identifyPlant(); });
-    resetBtn.addEventListener('click', () => {
-      status = 'idle'; collectedImages = [];
-      refreshSlots(); updateUI();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // --- Compression ---
-    const compressImage = (dataUrl) => new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX = 800;
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.65));
-      };
-      img.src = dataUrl;
-    });
-
-    const handleFileAdd = async (file) => {
-      if (!file || collectedImages.length >= 3) return;
-      const dataUrl = await new Promise(res => {
-        const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(file);
-      });
-      const compressed = await compressImage(dataUrl);
-      collectedImages.push(compressed);
-    };
-
-    // --- History (localStorage) ---
-    const HIST_KEY = 'ramban_history';
-
-    function saveToHistory(result, images) {
-      const history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
-      history.unshift({
-        id: Date.now(),
-        date: new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }),
-        commonNames: result.commonNames || '-',
-        scientificName: result.scientificName || '-',
-        toxic: result.toxic || false,
-        confidence: result.confidence || 0,
-        text: result.text,
-        thumb: images[0] // simpan foto pertama sebagai thumbnail
-      });
-      // Simpan maksimal 20 riwayat
-      localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(0, 20)));
-    }
-
-    window.openHistory = function() {
-      const history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
-      const list = document.getElementById('historyList');
-      if (history.length === 0) {
-        list.innerHTML = '<p style="color:rgba(241,236,226,0.5);font-family:sans-serif;font-size:13px;text-align:center;padding:24px;">Belum ada riwayat pindaian.</p>';
-      } else {
-        list.innerHTML = history.map(h => `
-          <div class="hist-item ${h.toxic ? 'toxic' : ''}" onclick="loadFromHistory(${h.id})">
-            <img class="hist-thumb" src="${h.thumb}" onerror="this.style.display='none'" />
-            <div class="hist-info">
-              <div class="hist-name">${h.toxic ? '⚠️ ' : ''}${h.commonNames}</div>
-              <div class="hist-latin">${h.scientificName}</div>
-              <div class="hist-date">${h.date} · ${h.confidence}% keyakinan</div>
-            </div>
-          </div>`).join('');
-      }
-      document.getElementById('historyPanel').classList.add('show');
-    };
-
-    window.closeHistory = function() {
-      document.getElementById('historyPanel').classList.remove('show');
-    };
-
-    window.clearHistory = function() {
-      if (confirm('Hapus semua riwayat?')) {
-        localStorage.removeItem(HIST_KEY);
-        openHistory();
-      }
-    };
-
-    window.loadFromHistory = function(id) {
-      const history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
-      const item = history.find(h => h.id === id);
-      if (!item) return;
-      closeHistory();
-      renderFormattedText(item.text, item.toxic, [item.thumb]);
-      status = 'success';
-      updateUI();
-      if (item.toxic) toxicBadge.classList.add('show');
-      setTimeout(() => resultsBox.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
-    };
-
-    // --- Offline Queue ---
-    window.processOfflineQueue = async function() {
-      if (!navigator.onLine || offlineQueue.length === 0) return;
-      const item = offlineQueue[0];
-      offlineQueue = offlineQueue.slice(1);
-      localStorage.setItem('ramban_offline_queue', JSON.stringify(offlineQueue));
-      collectedImages = item.images;
-      refreshSlots();
-      await identifyPlant();
-      checkOnline();
-    };
-
-    // --- Identify ---
-    const identifyPlant = async () => {
-      if (collectedImages.length === 0) return;
-
-      // Offline? Queue it
-      if (!navigator.onLine) {
-        offlineQueue.push({ images: collectedImages, queuedAt: new Date().toISOString() });
-        localStorage.setItem('ramban_offline_queue', JSON.stringify(offlineQueue));
-        checkOnline();
-        alert('Tidak ada koneksi internet. Foto disimpan dan akan diidentifikasi otomatis saat online kembali.');
-        return;
-      }
-
-      status = 'loading';
-      updateUI();
-
-      try {
-        const images = collectedImages.map(b64 => ({
-          imageData: b64.split(',')[1],
-          mimeType: 'image/jpeg'
-        }));
-        const response = await fetch('/api/identify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ images })
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
-        if (!result.text) throw new Error("Tidak ada respon dari API.");
-
-        // Show toxicity badge
-        if (result.toxic) toxicBadge.classList.add('show');
-
-        // Save to history
-        saveToHistory(result, collectedImages);
-
-        renderFormattedText(result.text, result.toxic, collectedImages);
-        status = 'success';
-        updateUI();
-        if (result.toxic) toxicBadge.classList.add('show');
-        setTimeout(() => resultsBox.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
-
-      } catch (error) {
-        console.error("Error:", error);
-        alert("Gagal menganalisis gambar.\nError: " + error.message);
-        status = 'idle';
-        updateUI();
-      }
-    };
-
-    // --- Render ---
-    const renderFormattedText = (text, toxic, imgs) => {
-      // Remove internal tag
-      const cleanText = text.replace('[PERINGATAN_BERACUN]\n', '').replace('[PERINGATAN_BERACUN]', '');
-
-      let html = '';
-
-      // Show collected photos
-      if (imgs && imgs.length > 0) {
-        html += '<div style="display:flex;gap:6px;margin-bottom:14px;">';
-        imgs.forEach(src => {
-          html += `<img src="${src}" style="flex:1;min-width:0;aspect-ratio:1;object-fit:cover;border-radius:4px;border:1.5px solid #2f4110;" />`;
-        });
-        html += '</div>';
-      }
-
-      const boldedText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#2f4110]">$1</strong>');
-      boldedText.split('\n').forEach(line => {
-        if (line.trim()) html += `<span class="block mb-3 leading-relaxed">${line}</span>`;
-      });
-      resultsContent.innerHTML = html;
-    };
-
-    // --- Init ---
-    updateUI();
-
-    // Disclaimer handled by inline script after HTML
-
-    // Chat initialized by inline script after HTML
-    checkOnline();
-
-  </script>
-
-  <!-- ── DISCLAIMER POPUP ── -->
-  <div id="disclaimerPopup" style="display:flex">
-    <div class="disc-box">
-      <div class="disc-logo">Ramban</div>
-      <div class="disc-tagline">Botani Digital — Pijak Bumi Learning</div>
-      <div class="disc-title">⚠️ Perhatian Sebelum Melanjutkan</div>
-      <p class="disc-text">
-        Aplikasi ini menggunakan <strong>kecerdasan buatan (AI)</strong> untuk membantu identifikasi tanaman dan <strong>bukan pengganti diagnosis medis atau konsultasi ahli botani profesional</strong>.<br><br>
-        Jangan mengonsumsi, mengolah, atau menggunakan tanaman berdasarkan hasil identifikasi ini tanpa verifikasi lebih lanjut, terutama bila menyangkut <strong>kesehatan manusia atau hewan peliharaan</strong>.
-      </p>
-      <button class="disc-agree" onclick="window.agreeDisclaimer()">✓ Saya Mengerti & Setuju</button>
-      <div class="disc-note">Persetujuan disimpan di perangkat Anda. Tidak ditampilkan lagi setelah ini.</div>
-    </div>
-  </div>
-
-  <!-- ── CHAT BOTANI FLOATING BUTTON ── -->
-  <div id="chatTeaser" style="position:fixed;bottom:86px;right:16px;z-index:1000;background:#2f4110;color:#F1ECE2;font-family:sans-serif;font-size:11px;font-weight:600;padding:8px 14px 8px 10px;border-radius:20px 20px 4px 20px;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;max-width:200px;line-height:1.4;cursor:pointer;animation:fadeIn .4s ease;">
-    🌿 <span>Punya pertanyaan soal tanaman? Tanya saya!</span>
-    <span id="teaserClose" style="margin-left:4px;opacity:.6;font-size:14px">×</span>
-  </div>
-  <button id="chatFab" onclick="window.rambanToggleChat()" title="Tanya Ahli Botani AI">🌿</button>
-
-  <!-- ── CHAT PANEL ── -->
-  <div id="chatPanel">
-    <div class="chat-hdr">
-      <div class="chat-hdr-icon">🌿</div>
-      <div class="chat-hdr-info">
-        <div class="chat-hdr-name">Ahli Botani AI</div>
-        <div class="chat-hdr-sub">Chat Asisten Ramban</div>
-      </div>
-      <button class="chat-close" id="chatClose">← Kembali</button>
-    </div>
-    <div class="chat-msgs" id="chatMsgs">
-      <div class="chat-bubble bot">Halo! Saya asisten botani Ramban. Ada yang ingin Anda tanyakan tentang tanaman? 🌱</div>
-    </div>
-    <div class="chat-typing" id="chatTyping"><span class="chat-dot"></span><span class="chat-dot"></span><span class="chat-dot"></span></div>
-    <div class="chat-quickbtns" id="quickBtns">
-      <div class="chat-qbtn" data-q="Apa tanaman yang cocok untuk dalam ruangan?">🏠 Tanaman indoor</div>
-      <div class="chat-qbtn" data-q="Tanaman apa yang beracun untuk kucing?">🐱 Berbahaya untuk kucing</div>
-      <div class="chat-qbtn" data-q="Bagaimana cara merawat tanaman sukulen?">🌵 Cara rawat sukulen</div>
-      <div class="chat-qbtn" data-q="Tanaman herbal apa yang mudah ditanam di rumah?">🌿 Herbal rumahan</div>
-    </div>
-    <div class="chat-input-row">
-      <input class="chat-input" id="chatInputField" type="text" placeholder="Tanya tentang tanaman..." maxlength="300" />
-      <button class="chat-send" id="chatSend">➤</button>
-    </div>
-  </div>
-
-  <!-- ── INLINE INIT: runs after all HTML exists ── -->
-  <script>
-    // ── DISCLAIMER: show/hide based on localStorage ──
-    (function() {
-      var popup = document.getElementById('disclaimerPopup');
-      if (!popup) return;
-      if (localStorage.getItem('ramban_disc_v2')) {
-        popup.style.display = 'none';
-      }
-      // else: CSS display:flex already shows it
-    })();
-
-    window.agreeDisclaimer = function() {
-      localStorage.setItem('ramban_disc_v2', '1');
-      localStorage.setItem('ramban_disc_date', new Date().toLocaleDateString('id-ID', {day:'2-digit',month:'long',year:'numeric'}));
-      var popup = document.getElementById('disclaimerPopup');
-      if (popup) popup.style.display = 'none';
-      updateFooterDisclaimer();
-    };
-
-    window.showDisclaimerAgain = function() {
-      var popup = document.getElementById('disclaimerPopup');
-      if (popup) popup.style.display = 'flex';
-    };
-
-    function updateFooterDisclaimer() {
-      var el = document.getElementById('disclaimerStatus');
-      if (!el) return;
-      var date = localStorage.getItem('ramban_disc_date');
-      if (localStorage.getItem('ramban_disc_v2')) {
-        el.textContent = '✓ Disclaimer disetujui' + (date ? ' pada ' + date : '');
-        el.style.color = 'rgba(144,204,64,0.6)';
-      } else {
-        el.textContent = '⚠ Disclaimer belum disetujui';
-        el.style.color = 'rgba(255,200,0,0.6)';
-      }
-    }
-    updateFooterDisclaimer();
-
-    // ── CHAT: all functions use lazy DOM lookup ──
-    var rambanChatOpen = false;
-    var rambanChatHistory = [];
-
-    window.rambanToggleChat = function() {
-      rambanChatOpen = !rambanChatOpen;
-      var panel = document.getElementById('chatPanel');
-      var fab   = document.getElementById('chatFab');
-      var input = document.getElementById('chatInputField');
-      var teaser = document.getElementById('chatTeaser');
-      if (!panel) return;
-
-      panel.style.display = rambanChatOpen ? 'flex' : 'none';
-      panel.style.flexDirection = 'column';
-
-      // Full-screen: hide FAB when chat open, show when closed
-      if (fab) fab.style.display = rambanChatOpen ? 'none' : 'flex';
-
-      // Lock body scroll to prevent background scroll when chat open
-      document.body.style.overflow = rambanChatOpen ? 'hidden' : '';
-      document.body.style.position = rambanChatOpen ? 'fixed' : '';
-      document.body.style.width = rambanChatOpen ? '100%' : '';
-
-      if (teaser) teaser.style.display = 'none';
-
-      if (rambanChatOpen) {
-        localStorage.setItem('ramban_chat_used', '1');
-        if (input) setTimeout(function(){ input.focus(); }, 200);
-        var msgs = document.getElementById('chatMsgs');
-        if (msgs) setTimeout(function(){ msgs.scrollTop = msgs.scrollHeight; }, 80);
-      }
-    };
-
-    window.rambanSendChat = function() {
-      var input = document.getElementById('chatInputField');
-      var msgs  = document.getElementById('chatMsgs');
-      var typing = document.getElementById('chatTyping');
-      var quickEl = document.getElementById('quickBtns');
-      if (!input) return;
-      var q = input.value.trim();
-      if (!q) return;
-      input.value = '';
-      if (quickEl) quickEl.style.display = 'none';
-
-      // Add user bubble
-      var ub = document.createElement('div');
-      ub.className = 'chat-bubble user';
-      ub.textContent = q;
-      if (msgs) msgs.appendChild(ub);
-
-      rambanChatHistory.push({ role: 'user', text: q });
-      if (typing) { typing.style.display = 'flex'; typing.style.alignItems = 'center'; typing.style.gap = '4px'; }
-      if (msgs) msgs.scrollTop = msgs.scrollHeight;
-
-      function addReply(text) {
-        if (typing) typing.style.display = 'none';
-        var bb = document.createElement('div');
-        bb.className = 'chat-bubble bot';
-        bb.textContent = text;
-        if (msgs) { msgs.appendChild(bb); msgs.scrollTop = msgs.scrollHeight; }
-        rambanChatHistory.push({ role: 'assistant', text: text });
-      }
-
-      // Build messages array for OpenRouter
-      var messages = [
-        {
-          role: 'system',
-          content: 'Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning Indonesia. Jawab pertanyaan tentang tanaman dalam bahasa Indonesia yang ramah, singkat (maks 3 paragraf), dan mudah dipahami. Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, ekologi, dan fakta botani. Jika bukan tentang tanaman, jawab: Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman?'
-        }
-      ];
-      // Add history
-      rambanChatHistory.slice(-6).forEach(function(h) {
-        if (h.role === 'user' || h.role === 'assistant') {
-          messages.push({ role: h.role, content: h.text });
-        }
-      });
-      messages.push({ role: 'user', content: q });
-
-      fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer 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',
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Ramban Botani App'
-        },
-        body: JSON.stringify({
-          model: 'baidu/cobuddy:free',
-          messages: messages,
-          max_tokens: 500,
-          temperature: 0.7
-        })
-      })
-      .then(function(r) {
-        if (!r.ok) {
-          return r.json().then(function(errData) {
-            throw new Error('API Error ' + r.status + ': ' + (errData.error && errData.error.message || JSON.stringify(errData)));
-          });
-        }
-        return r.json();
-      })
-      .then(function(data) {
-        var reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-        addReply(reply || 'Maaf, tidak ada respons. Coba lagi ya! 🌿');
-      })
-      .catch(function(err) {
-        console.error('Chat error:', err);
-        addReply('Error: ' + (err.message || 'Tidak dapat terhubung ke server. Pastikan online dan coba lagi.') + ' 🌿');
-      });
-    };
-
-    window.rambanSendQuick = function(q) {
-      var quickEl = document.getElementById('quickBtns');
-      var input = document.getElementById('chatInputField');
-      if (quickEl) quickEl.style.display = 'none';
-      if (input) input.value = q;
-      window.rambanSendChat();
-    };
-
-    // ── Prevent context menu & long-press hold inside chatPanel ──
-    var chatPanelEl = document.getElementById('chatPanel');
-    if (chatPanelEl) {
-      // Block right-click / long-press context menu
-      chatPanelEl.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-        return false;
-      });
-
-      // Block iOS/Android hold-to-select on non-text elements
-      chatPanelEl.addEventListener('touchstart', function(e) {
-        // Allow default on input and bubbles (for text selection/keyboard)
-        var t = e.target;
-        if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON') return;
-        if (t.classList.contains('chat-bubble')) return;
-        // Prevent long-press on everything else (header, typing area, etc.)
-        e.stopPropagation();
-      }, { passive: true });
-    }
-
-    // Wire send button & enter key
-    var sendBtn = document.getElementById('chatSend');
-    var inputEl = document.getElementById('chatInputField');
-    var closeBtn = document.getElementById('chatClose');
-    if (sendBtn) sendBtn.addEventListener('click', window.rambanSendChat);
-    if (closeBtn) closeBtn.addEventListener('click', window.rambanToggleChat);
-    if (inputEl) inputEl.addEventListener('keydown', function(e){ if(e.key==='Enter') window.rambanSendChat(); });
-
-    // Quick buttons via data-q
-    var quickEl = document.getElementById('quickBtns');
-    if (quickEl) {
-      quickEl.addEventListener('click', function(e) {
-        var btn = e.target.closest('[data-q]');
-        if (!btn) return;
-        window.rambanSendQuick(btn.getAttribute('data-q'));
-      });
-    }
-
-    // Teaser: show after 3s if chat never used
-    if (!localStorage.getItem('ramban_chat_used')) {
-      setTimeout(function(){
-        var t = document.getElementById('chatTeaser');
-        if (t) t.style.display = 'flex';
-      }, 3000);
-    }
-    var teaserEl = document.getElementById('chatTeaser');
-    var teaserX  = document.getElementById('teaserClose');
-    if (teaserEl) teaserEl.addEventListener('click', function(){ window.rambanToggleChat(); });
-    if (teaserX)  teaserX.addEventListener('click', function(e){ e.stopPropagation(); teaserEl.style.display='none'; });
-  </script>
-</body>
-</html>
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/index.html b/index.html
+index 0729b38113be0665bacf77daf5afdd15c2569a02..a32080ed35d39f3331a983f6c167098d3e09dd57 100644
+--- a/index.html
++++ b/index.html
+@@ -282,51 +282,52 @@ html, body {
+       font-family: sans-serif;
+       overflow: hidden;
+     }
+     #chatPanel.open { display: flex; }
+     .chat-hdr {
+       background: #2f4110; color: #F1ECE2;
+       padding: 14px 16px;
+       padding-top: max(14px, env(safe-area-inset-top));
+       display: flex; align-items: center; gap: 12px;
+       flex-shrink: 0;
+     }
+     .chat-hdr-icon { font-size: 22px; }
+     .chat-hdr-info { flex: 1; }
+     .chat-hdr-name { font-size: 15px; font-weight: 700; }
+     .chat-hdr-sub { font-size: 11px; opacity: .7; }
+     .chat-close {
+       background: rgba(255,255,255,0.15); border: none; color: #F1ECE2;
+       font-size: 14px; font-weight: 700; cursor: pointer;
+       padding: 6px 14px; border-radius: 20px;
+       letter-spacing: .5px;
+     }
+ .chat-msgs {
+   flex: 1; overflow-y: scroll; overflow-x: hidden;
+   padding: 16px; display: flex; flex-direction: column; gap: 10px;
+   -webkit-overflow-scrolling: touch;
+-  overscroll-behavior: none; /* Ubah ini menjadi none */
++  overscroll-behavior-y: contain;
++  overscroll-behavior-x: none; /* tahan bounce horizontal */
+   touch-action: pan-y;
+   scroll-behavior: smooth;
+   background: #f7f3eb;
+ }
+     }
+     .chat-msgs::-webkit-scrollbar { width: 3px; }
+     .chat-msgs::-webkit-scrollbar-track { background: transparent; }
+     .chat-msgs::-webkit-scrollbar-thumb { background: #2f4110; border-radius: 4px; }
+     .chat-bubble {
+       max-width: 82%; padding: 10px 14px; border-radius: 14px;
+       font-size: 13px; line-height: 1.65;
+     }
+     .chat-bubble.bot {
+       background: #fff; color: #2b2b2b; border-bottom-left-radius: 3px;
+       align-self: flex-start; border: .5px solid #D6D1C6;
+     }
+     .chat-bubble.user {
+       background: #2f4110; color: #F1ECE2;
+       border-bottom-right-radius: 3px; align-self: flex-end;
+     }
+     /* Disable hold/long-press context menu inside chat */
+     #chatPanel, #chatPanel * {
+       -webkit-touch-callout: none;
+       -webkit-user-select: none;
+       user-select: none;
+@@ -1067,69 +1068,89 @@ html, body {
+       updateFooterDisclaimer();
+     };
+ 
+     window.showDisclaimerAgain = function() {
+       var popup = document.getElementById('disclaimerPopup');
+       if (popup) popup.style.display = 'flex';
+     };
+ 
+     function updateFooterDisclaimer() {
+       var el = document.getElementById('disclaimerStatus');
+       if (!el) return;
+       var date = localStorage.getItem('ramban_disc_date');
+       if (localStorage.getItem('ramban_disc_v2')) {
+         el.textContent = '✓ Disclaimer disetujui' + (date ? ' pada ' + date : '');
+         el.style.color = 'rgba(144,204,64,0.6)';
+       } else {
+         el.textContent = '⚠ Disclaimer belum disetujui';
+         el.style.color = 'rgba(255,200,0,0.6)';
+       }
+     }
+     updateFooterDisclaimer();
+ 
+     // ── CHAT: all functions use lazy DOM lookup ──
+     var rambanChatOpen = false;
+     var rambanChatHistory = [];
++    var rambanPageScrollTop = 0;
++
++    function lockPageScroll() {
++      rambanPageScrollTop = window.scrollY || window.pageYOffset || 0;
++      document.body.style.position = 'fixed';
++      document.body.style.top = '-' + rambanPageScrollTop + 'px';
++      document.body.style.left = '0';
++      document.body.style.right = '0';
++      document.body.style.width = '100%';
++      document.body.style.overflow = 'hidden';
++    }
++
++    function unlockPageScroll() {
++      document.body.style.position = '';
++      document.body.style.top = '';
++      document.body.style.left = '';
++      document.body.style.right = '';
++      document.body.style.width = '';
++      document.body.style.overflow = '';
++      window.scrollTo(0, rambanPageScrollTop);
++    }
+ 
+     window.rambanToggleChat = function() {
+       rambanChatOpen = !rambanChatOpen;
+       var panel = document.getElementById('chatPanel');
+       var fab   = document.getElementById('chatFab');
+       var input = document.getElementById('chatInputField');
+       var teaser = document.getElementById('chatTeaser');
+       if (!panel) return;
+ 
+       panel.style.display = rambanChatOpen ? 'flex' : 'none';
+       panel.style.flexDirection = 'column';
+ 
+       // Full-screen: hide FAB when chat open, show when closed
+       if (fab) fab.style.display = rambanChatOpen ? 'none' : 'flex';
+ 
+       // Lock body scroll to prevent background scroll when chat open
+-      document.body.style.overflow = rambanChatOpen ? 'hidden' : '';
+-      document.body.style.position = rambanChatOpen ? 'fixed' : '';
+-      document.body.style.width = rambanChatOpen ? '100%' : '';
++      if (rambanChatOpen) lockPageScroll();
++      else unlockPageScroll();
+ 
+       if (teaser) teaser.style.display = 'none';
+ 
+       if (rambanChatOpen) {
+         localStorage.setItem('ramban_chat_used', '1');
+         if (input) setTimeout(function(){ input.focus(); }, 200);
+         var msgs = document.getElementById('chatMsgs');
+         if (msgs) setTimeout(function(){ msgs.scrollTop = msgs.scrollHeight; }, 80);
+       }
+     };
+ 
+     window.rambanSendChat = function() {
+       var input = document.getElementById('chatInputField');
+       var msgs  = document.getElementById('chatMsgs');
+       var typing = document.getElementById('chatTyping');
+       var quickEl = document.getElementById('quickBtns');
+       if (!input) return;
+       var q = input.value.trim();
+       if (!q) return;
+       input.value = '';
+       if (quickEl) quickEl.style.display = 'none';
+ 
+       // Add user bubble
+       var ub = document.createElement('div');
+       ub.className = 'chat-bubble user';
+@@ -1221,39 +1242,60 @@ html, body {
+         if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON') return;
+         if (t.classList.contains('chat-bubble')) return;
+         // Prevent long-press on everything else (header, typing area, etc.)
+         e.stopPropagation();
+       }, { passive: true });
+     }
+ 
+     // Wire send button & enter key
+     var sendBtn = document.getElementById('chatSend');
+     var inputEl = document.getElementById('chatInputField');
+     var closeBtn = document.getElementById('chatClose');
+     if (sendBtn) sendBtn.addEventListener('click', window.rambanSendChat);
+     if (closeBtn) closeBtn.addEventListener('click', window.rambanToggleChat);
+     if (inputEl) inputEl.addEventListener('keydown', function(e){ if(e.key==='Enter') window.rambanSendChat(); });
+ 
+     // Quick buttons via data-q
+     var quickEl = document.getElementById('quickBtns');
+     if (quickEl) {
+       quickEl.addEventListener('click', function(e) {
+         var btn = e.target.closest('[data-q]');
+         if (!btn) return;
+         window.rambanSendQuick(btn.getAttribute('data-q'));
+       });
+     }
+ 
++
++    // Prevent pull-to-refresh from fighting chat scroll at top edge
++    var chatMsgsEl = document.getElementById('chatMsgs');
++    if (chatMsgsEl) {
++      var chatTouchStartY = 0;
++      chatMsgsEl.addEventListener('touchstart', function(e) {
++        if (!e.touches || !e.touches.length) return;
++        chatTouchStartY = e.touches[0].clientY;
++      }, { passive: true });
++
++      chatMsgsEl.addEventListener('touchmove', function(e) {
++        if (!rambanChatOpen || !e.touches || !e.touches.length) return;
++        var currentY = e.touches[0].clientY;
++        var pullingDown = currentY > chatTouchStartY;
++        var atTop = chatMsgsEl.scrollTop <= 0;
++        if (atTop && pullingDown) {
++          e.preventDefault();
++        }
++      }, { passive: false });
++    }
++
+     // Teaser: show after 3s if chat never used
+     if (!localStorage.getItem('ramban_chat_used')) {
+       setTimeout(function(){
+         var t = document.getElementById('chatTeaser');
+         if (t) t.style.display = 'flex';
+       }, 3000);
+     }
+     var teaserEl = document.getElementById('chatTeaser');
+     var teaserX  = document.getElementById('teaserClose');
+     if (teaserEl) teaserEl.addEventListener('click', function(){ window.rambanToggleChat(); });
+     if (teaserX)  teaserX.addEventListener('click', function(e){ e.stopPropagation(); teaserEl.style.display='none'; });
+   </script>
+ </body>
+ </html>
+ 
+EOF
+)
