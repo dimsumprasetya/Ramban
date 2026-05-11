@@ -40,6 +40,7 @@
       overflow-x: hidden;
       background-color: #3b4d19;
       color: #2b2b2b;
+      overscroll-behavior-y: none; /* prevent pull-to-refresh interfering with chat */
     }
 
     /* Style untuk area hasil teks AI */
@@ -103,6 +104,8 @@
     #pickerModal > div {
       max-height: 90vh;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
     }
 
     /* Slot thumbnail: fluid agar muat 3 kolom di modal sempit */
@@ -182,6 +185,7 @@
     /* Toxicity badge */
     #toxicBadge {
       display: none;
+      position: relative; z-index: 100;
       background: #c0392b; color: #fff;
       font-family: sans-serif; font-size: 12px; font-weight: 700;
       padding: 10px 16px; margin-bottom: 12px;
@@ -197,8 +201,11 @@
 
     /* History panel */
     #historyPanel {
-      display: none; position: fixed; inset: 0; z-index: 9998;
-      background: #3b4d19; overflow-y: auto; padding: 20px 16px;
+      display: none; position: fixed; inset: 0; z-index: 9000;
+      background: #3b4d19; overflow-y: scroll; padding: 20px 16px;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
     }
     #historyPanel.show { display: block; }
     .hist-item {
@@ -255,7 +262,7 @@
 
     /* ── Chat Botani ── */
     #chatFab {
-      position: fixed; bottom: 24px; right: 20px; z-index: 9000;
+      position: fixed; bottom: 24px; right: 20px; z-index: 1100;
       touch-action: manipulation; -webkit-tap-highlight-color: transparent;
       width: 52px; height: 52px; border-radius: 50%;
       background: #2f4110; color: #F1ECE2;
@@ -266,7 +273,7 @@
     }
     #chatFab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.4); }
     #chatPanel {
-      position: fixed; bottom: 86px; right: 16px; z-index: 9000;
+      position: fixed; bottom: 86px; right: 16px; z-index: 1050;
       width: calc(100vw - 32px); max-width: 360px;
       background: #F1ECE2; border-radius: 8px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.35);
@@ -274,7 +281,6 @@
       display: none; flex-direction: column;
       max-height: min(70vh, 520px); font-family: sans-serif;
       overflow: hidden;
-      touch-action: pan-y;
     }
     #chatPanel.open { display: flex; }
     .chat-hdr {
@@ -287,12 +293,15 @@
     .chat-hdr-sub { font-size: 10px; opacity: .7; }
     .chat-close { background: none; border: none; color: #F1ECE2; font-size: 18px; cursor: pointer; padding: 0 4px; }
     .chat-msgs {
-      flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px;
+      flex: 1; overflow-y: scroll; overflow-x: hidden; padding: 12px;
       display: flex; flex-direction: column; gap: 8px;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
-      max-height: 45vh;
-      min-height: 120px;
+      overscroll-behavior-y: contain;
+      max-height: 42vh;
+      min-height: 100px;
+      touch-action: pan-y;
+      scroll-behavior: smooth;
     }
     .chat-bubble {
       max-width: 85%; padding: 8px 12px; border-radius: 12px;
@@ -398,7 +407,7 @@
           </div>
 
           <!-- Loading Overlay -->
-          <div id="loadingOverlay" class="hidden absolute inset-0 bg-[#F1ECE2]/80 backdrop-blur-[2px] flex-col items-center justify-center">
+          <div id="loadingOverlay" class="hidden absolute inset-0 bg-[#F1ECE2]/80 backdrop-blur-[2px] flex-col items-center justify-center" style="z-index:300;">
             <svg class="animate-spin h-10 w-10 text-[#2f4110]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -451,7 +460,7 @@
     </div>
 
     <!-- Camera / Gallery Picker Modal (centered) -->
-    <div id="pickerModal" class="hidden fixed inset-0 flex items-center justify-center px-4" style="z-index:9990;background:rgba(0,0,0,0.6)" style="background: rgba(0,0,0,0.6)">
+    <div id="pickerModal" class="hidden fixed inset-0 flex items-center justify-center px-4" style="z-index:500;background:rgba(0,0,0,0.6)" style="background: rgba(0,0,0,0.6)">
       <div class="w-full max-w-sm bg-[#F1ECE2] shadow-2xl overflow-hidden" style="border-radius: 6px;">
         <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#2f4110]/60 pt-5 pb-3 px-6 border-b border-[#D6D1C6]">Pilih Sumber Gambar</p>
 
@@ -501,7 +510,7 @@
       </div>
     </div>
   <!-- Offline indicator -->
-  <div id="offlineBar" class="hidden fixed top-0 left-0 right-0 z-50 bg-yellow-600 text-white text-center text-xs font-bold py-2 px-4" style="font-family:sans-serif;">
+  <div id="offlineBar" class="hidden fixed top-0 left-0 right-0 text-white text-center text-xs font-bold py-2 px-4" style="z-index:2000;background:#d97706;" style="font-family:sans-serif;">
     📡 Tidak ada koneksi. Foto akan diidentifikasi otomatis saat online kembali.
   </div>
 
@@ -962,7 +971,7 @@
   </div>
 
   <!-- ── CHAT BOTANI FLOATING BUTTON ── -->
-  <div id="chatTeaser" style="position:fixed;bottom:86px;right:16px;z-index:8999;background:#2f4110;color:#F1ECE2;font-family:sans-serif;font-size:11px;font-weight:600;padding:8px 14px 8px 10px;border-radius:20px 20px 4px 20px;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;max-width:200px;line-height:1.4;cursor:pointer;animation:fadeIn .4s ease;">
+  <div id="chatTeaser" style="position:fixed;bottom:86px;right:16px;z-index:1000;background:#2f4110;color:#F1ECE2;font-family:sans-serif;font-size:11px;font-weight:600;padding:8px 14px 8px 10px;border-radius:20px 20px 4px 20px;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;max-width:200px;line-height:1.4;cursor:pointer;animation:fadeIn .4s ease;">
     🌿 <span>Punya pertanyaan soal tanaman? Tanya saya!</span>
     <span id="teaserClose" style="margin-left:4px;opacity:.6;font-size:14px">×</span>
   </div>
@@ -974,7 +983,7 @@
       <div class="chat-hdr-icon">🌿</div>
       <div class="chat-hdr-info">
         <div class="chat-hdr-name">Ahli Botani AI</div>
-        <div class="chat-hdr-sub">Chat asisten ramban</div>
+        <div class="chat-hdr-sub">Didukung Pl@ntNet × Wikipedia</div>
       </div>
       <button class="chat-close" id="chatClose">✕</button>
     </div>
