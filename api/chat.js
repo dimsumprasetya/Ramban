@@ -6,15 +6,20 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { message, history = [] } = req.body;
-    if (!message) return res.status(400).json({ error: 'Pesan kosong.' });
+    const { message, history = [] } = req.body || {};
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({ error: 'Pesan kosong.' });
+    }
 
-    // ── Cari info dari Wikipedia dulu sebagai konteks ──
+    // ── Cari info Wikipedia sebagai konteks tambahan (opsional) ──
     let wikiContext = '';
     try {
-      // Ekstrak keyword dari pesan (ambil 1-3 kata kunci)
-      const keywords = message.replace(/[^a-zA-Z\s]/g, '').split(' ')
-        .filter(w => w.length > 3).slice(0, 2).join(' ');
+      const keywords = String(message)
+        .replace(/[^a-zA-Z\s]/g, '')
+        .split(' ')
+        .filter(w => w.length > 3)
+        .slice(0, 2)
+        .join(' ');
 
       if (keywords) {
         const wikiRes = await fetch(
@@ -28,61 +33,122 @@ module.exports = async function handler(req, res) {
           }
         }
       }
-    } catch (_) { /* Wikipedia gagal, lanjut tanpa konteks */ }
+    } catch (_) { /* lanjut tanpa wiki context */ }
 
-    // ── Build system prompt ──
     const systemPrompt = `Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning Indonesia.
 Jawab pertanyaan tentang tanaman dalam bahasa Indonesia yang ramah, singkat (maks 3 paragraf), dan mudah dipahami masyarakat umum.
 Fokus pada: identifikasi tanaman, cara perawatan, manfaat, toksisitas & keamanan, ekologi, dan fakta botani menarik.
-Jika ada informasi dari Wikipedia berikut, gunakan sebagai referensi tambahan: "${wikiContext}"
+Jika ada informasi Wikipedia berikut, gunakan sebagai referensi tambahan: "${wikiContext || 'Tidak tersedia'}"
 Jika pertanyaan bukan tentang tanaman atau alam, jawab: "Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman? 🌿"
 Akhiri jawaban dengan emoji tanaman yang relevan.`;
 
-    // ── Build messages untuk Gemini ──
-    const messages = [];
-    // Tambah history (skip system message)
-    history.filter(h => h.role !== 'system').forEach(h => {
-      messages.push({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.text }] });
-    });
-    // Pastikan pesan terakhir adalah user
-    if (!messages.length || messages[messages.length - 1].role !== 'user') {
-      messages.push({ role: 'user', parts: [{ text: message }] });
-    }
+    const trimmedHistory = Array.isArray(history) ? history.slice(-6) : [];
 
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-      return res.status(500).json({ error: "Konfigurasi server belum lengkap (GEMINI_API_KEY belum diatur)." });
-    }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+    async function askCobuddy() {
+      const openRouterKey = process.env.OPENROUTER_API_KEY;
+      if (!openRouterKey) throw new Error('OPENROUTER_API_KEY belum diatur');
 
-    const payload = {
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: messages,
-      generationConfig: { temperature: 0.6, maxOutputTokens: 400 }
-    };
+      const model = process.env.COBUDDY_MODEL || 'baidu/cobuddy:free';
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        ...trimmedHistory
+          .filter(h => h && (h.role === 'user' || h.role === 'assistant'))
+          .map(h => ({ role: h.role, content: h.text })),
+        { role: 'user', content: String(message) }
+      ];
 
-    const geminiRes = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${openRouterKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': process.env.APP_ORIGIN || 'https://ramban.vercel.app',
+          'X-Title': 'Ramban Botani App'
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: 500,
+          temperature: 0.7
+        })
+      });
 
-    const geminiData = await geminiRes.json();
-
-    if (!geminiRes.ok) {
-      // Gemini error → fallback Wikipedia answer
-      if (wikiContext) {
-        return res.status(200).json({
-          reply: `Berdasarkan Wikipedia: ${wikiContext} 🌿\n\n(Catatan: Layanan AI sedang tidak tersedia, ini adalah informasi dasar dari Wikipedia.)`
-        });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data?.error?.message || `Cobuddy error ${resp.status}`);
       }
-      return res.status(200).json({ reply: 'Maaf, layanan AI sedang tidak tersedia. Silakan coba lagi nanti. 🌿' });
+
+      const text = data?.choices?.[0]?.message?.content;
+      if (!text) throw new Error('Cobuddy tidak mengembalikan konten');
+      return text;
     }
 
-    const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Maaf, tidak ada respons. Coba lagi ya! 🌿';
-    return res.status(200).json({ reply });
+    async function askGemini() {
+      const geminiKey = process.env.GEMINI_API_KEY;
+      if (!geminiKey) throw new Error('GEMINI_API_KEY belum diatur');
 
+      const contents = trimmedHistory
+        .filter(h => h && (h.role === 'user' || h.role === 'assistant'))
+        .map(h => ({
+          role: h.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: h.text }]
+        }));
+
+      contents.push({ role: 'user', parts: [{ text: String(message) }] });
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+      const payload = {
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        generationConfig: { temperature: 0.6, maxOutputTokens: 400 }
+      };
+
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(data?.error?.message || `Gemini error ${resp.status}`);
+      }
+
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error('Gemini tidak mengembalikan konten');
+      return text;
+    }
+
+    // ── Sistem saling mendukung: Cobuddy -> Gemini -> Wikipedia fallback ──
+    const errors = [];
+
+    try {
+      const reply = await askCobuddy();
+      return res.status(200).json({ reply, source: 'cobuddy', wikiContext: wikiContext || null });
+    } catch (e) {
+      errors.push(`cobuddy: ${e.message}`);
+    }
+
+    try {
+      const reply = await askGemini();
+      return res.status(200).json({ reply, source: 'gemini', wikiContext: wikiContext || null });
+    } catch (e) {
+      errors.push(`gemini: ${e.message}`);
+    }
+
+    if (wikiContext) {
+      return res.status(200).json({
+        reply: `Saya belum bisa menghubungi AI utama saat ini. Berdasarkan Wikipedia: ${wikiContext} 🌿`,
+        source: 'wikipedia',
+        warning: errors.join(' | ')
+      });
+    }
+
+    return res.status(503).json({
+      error: 'Semua layanan AI sedang tidak tersedia. Silakan coba lagi beberapa saat.',
+      details: errors
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
-}
+};
