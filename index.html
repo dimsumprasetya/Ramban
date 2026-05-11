@@ -98,6 +98,10 @@ body.chat-open {
     /* Results box: full-width di HP kecil */
     #resultsBox {
       padding: clamp(1rem, 5vw, 2rem) !important;
+      max-height: min(78dvh, 760px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
     }
 
     /* Reset button tidak keluar area */
