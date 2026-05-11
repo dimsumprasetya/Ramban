@@ -41,6 +41,7 @@ html, body {
   background-color: #3b4d19;
   color: #2b2b2b;
   overscroll-behavior: none; /* Menggunakan 'none' secara absolut untuk x dan y */
+  touch-action: pan-y;
 }
 
 body.chat-open {
@@ -293,6 +294,7 @@ body.chat-open {
       overflow: hidden;
       overscroll-behavior: contain;
       touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
     }
     #chatPanel.open { display: flex; }
 
@@ -1351,14 +1353,21 @@ body.chat-open {
       }
     }
 
-    if (scrollUpBtn) {
-      scrollUpBtn.addEventListener('click', function(){ smoothPageScroll(-320); });
-      scrollUpBtn.addEventListener('touchstart', function(e){ e.preventDefault(); smoothPageScroll(-320); }, { passive: false });
+    function bindTouchScrollButton(btn, delta) {
+      if (!btn) return;
+      var holdTimer = null;
+      btn.addEventListener('click', function(){ smoothPageScroll(delta); });
+      btn.addEventListener('touchstart', function(e){
+        e.preventDefault();
+        smoothPageScroll(delta);
+        holdTimer = setInterval(function(){ smoothPageScroll(delta); }, 220);
+      }, { passive: false });
+      btn.addEventListener('touchend', function(){ if (holdTimer) clearInterval(holdTimer); holdTimer = null; });
+      btn.addEventListener('touchcancel', function(){ if (holdTimer) clearInterval(holdTimer); holdTimer = null; });
     }
-    if (scrollDownBtn) {
-      scrollDownBtn.addEventListener('click', function(){ smoothPageScroll(320); });
-      scrollDownBtn.addEventListener('touchstart', function(e){ e.preventDefault(); smoothPageScroll(320); }, { passive: false });
-    }
+
+    bindTouchScrollButton(scrollUpBtn, -320);
+    bindTouchScrollButton(scrollDownBtn, 320);
 
     // Fail-safe: ensure main page scroll is never stuck after chat toggles
     window.addEventListener('pageshow', function() {
