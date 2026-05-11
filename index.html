@@ -273,16 +273,28 @@ html, body {
     }
     #chatFab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.4); }
     #chatPanel {
-      position: fixed; inset: 0; z-index: 9500;
-      width: 100vw; max-width: 100vw;
+      position: fixed; z-index: 9500;
+      right: 16px; bottom: 86px;
+      width: min(92vw, 390px); height: min(72vh, 620px);
       background: #F1ECE2;
-      border-top: none;
+      border: 1px solid #d9d2c4;
+      border-radius: 14px;
+      box-shadow: 0 22px 50px rgba(0,0,0,.35);
       display: none; flex-direction: column;
-      max-height: 100vh; height: 100vh;
       font-family: sans-serif;
       overflow: hidden;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
     }
     #chatPanel.open { display: flex; }
+
+    @media (max-width: 640px) {
+      #chatPanel {
+        left: 12px; right: 12px; bottom: 80px;
+        width: auto; height: min(78vh, 640px);
+      }
+    }
+
     .chat-hdr {
       background: #2f4110; color: #F1ECE2;
       padding: 14px 16px;
@@ -1029,7 +1041,7 @@ html, body {
         <div class="chat-hdr-name">Ahli Botani AI</div>
         <div class="chat-hdr-sub">Chat Asisten Ramban</div>
       </div>
-      <button class="chat-close" id="chatClose">← Kembali</button>
+      <button class="chat-close" id="chatClose">✕ Tutup</button>
     </div>
     <div class="chat-msgs" id="chatMsgs">
       <div class="chat-bubble bot">Halo! Saya asisten botani Ramban. Ada yang ingin Anda tanyakan tentang tanaman? 🌱</div>
@@ -1089,27 +1101,6 @@ html, body {
     // ── CHAT: all functions use lazy DOM lookup ──
     var rambanChatOpen = false;
     var rambanChatHistory = [];
-    var rambanPageScrollTop = 0;
-
-    function lockPageScroll() {
-      rambanPageScrollTop = window.scrollY || window.pageYOffset || 0;
-      document.body.style.position = 'fixed';
-      document.body.style.top = '-' + rambanPageScrollTop + 'px';
-      document.body.style.left = '0';
-      document.body.style.right = '0';
-      document.body.style.width = '100%';
-      document.body.style.overflow = 'hidden';
-    }
-
-    function unlockPageScroll() {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
-      document.body.style.right = '';
-      document.body.style.width = '';
-      document.body.style.overflow = '';
-      window.scrollTo(0, rambanPageScrollTop);
-    }
 
     window.rambanToggleChat = function() {
       rambanChatOpen = !rambanChatOpen;
@@ -1126,8 +1117,7 @@ html, body {
       if (fab) fab.style.display = rambanChatOpen ? 'none' : 'flex';
 
       // Lock body scroll to prevent background scroll when chat open
-      if (rambanChatOpen) lockPageScroll();
-      else unlockPageScroll();
+      // Popup mode: biarkan halaman tetap natural, tanpa memaksa fixed body
 
       if (teaser) teaser.style.display = 'none';
 
