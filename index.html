@@ -417,11 +417,12 @@ body.chat-open {
     .chat-qbtn:hover { background: rgba(47,65,16,.15); }
 
     #scrollControls {
-      position: fixed; left: 14px; bottom: 24px; z-index: 1080;
+      position: fixed; left: max(10px, env(safe-area-inset-left));
+      bottom: max(18px, env(safe-area-inset-bottom)); z-index: 1080;
       display: flex; flex-direction: column; gap: 8px;
     }
     .scroll-btn {
-      width: 42px; height: 42px; border-radius: 50%;
+      width: clamp(38px, 9vw, 46px); height: clamp(38px, 9vw, 46px); border-radius: 50%;
       border: none; background: rgba(47,65,16,0.92); color: #F1ECE2;
       font-size: 18px; font-weight: 700; cursor: pointer;
       box-shadow: 0 4px 16px rgba(0,0,0,.28);
@@ -1328,12 +1329,36 @@ body.chat-open {
     var scrollDownBtn = document.getElementById('scrollDownBtn');
     var scrollControls = document.getElementById('scrollControls');
 
-    function smoothPageScroll(delta) {
-      window.scrollBy({ top: delta, left: 0, behavior: 'smooth' });
+    function getActiveScrollTarget() {
+      var chatMsgs = document.getElementById('chatMsgs');
+      var historyPanel = document.getElementById('historyPanel');
+      var pickerModal = document.getElementById('pickerModal');
+      var modalBody = document.querySelector('#pickerModal > div');
+
+      if (rambanChatOpen && chatMsgs) return chatMsgs;
+      if (historyPanel && historyPanel.classList.contains('show')) return historyPanel;
+      if (pickerModal && !pickerModal.classList.contains('hidden') && modalBody) return modalBody;
+      return (document.scrollingElement || document.documentElement);
     }
 
-    if (scrollUpBtn) scrollUpBtn.addEventListener('click', function(){ smoothPageScroll(-320); });
-    if (scrollDownBtn) scrollDownBtn.addEventListener('click', function(){ smoothPageScroll(320); });
+    function smoothPageScroll(delta) {
+      var target = getActiveScrollTarget();
+      if (!target) return;
+      if (target === document.documentElement || target === document.body || target === document.scrollingElement) {
+        window.scrollBy({ top: delta, left: 0, behavior: 'smooth' });
+      } else {
+        target.scrollBy({ top: delta, left: 0, behavior: 'smooth' });
+      }
+    }
+
+    if (scrollUpBtn) {
+      scrollUpBtn.addEventListener('click', function(){ smoothPageScroll(-320); });
+      scrollUpBtn.addEventListener('touchstart', function(e){ e.preventDefault(); smoothPageScroll(-320); }, { passive: false });
+    }
+    if (scrollDownBtn) {
+      scrollDownBtn.addEventListener('click', function(){ smoothPageScroll(320); });
+      scrollDownBtn.addEventListener('touchstart', function(e){ e.preventDefault(); smoothPageScroll(320); }, { passive: false });
+    }
 
     // Fail-safe: ensure main page scroll is never stuck after chat toggles
     window.addEventListener('pageshow', function() {
