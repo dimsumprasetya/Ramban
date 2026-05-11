@@ -35,13 +35,13 @@
       --scroll-y: 0;
     }
 
-    body {
-      font-family: 'Inter', sans-serif;
-      overflow-x: hidden;
-      background-color: #3b4d19;
-      color: #2b2b2b;
-      overscroll-behavior-y: none; /* prevent pull-to-refresh interfering with chat */
-    }
+html, body {
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  background-color: #3b4d19;
+  color: #2b2b2b;
+  overscroll-behavior: none; /* Menggunakan 'none' secara absolut untuk x dan y */
+}
 
     /* Style untuk area hasil teks AI */
     .prose strong {
@@ -300,14 +300,15 @@
       padding: 6px 14px; border-radius: 20px;
       letter-spacing: .5px;
     }
-    .chat-msgs {
-      flex: 1; overflow-y: scroll; overflow-x: hidden;
-      padding: 16px; display: flex; flex-direction: column; gap: 10px;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior-y: contain;
-      touch-action: pan-y;
-      scroll-behavior: smooth;
-      background: #f7f3eb;
+.chat-msgs {
+  flex: 1; overflow-y: scroll; overflow-x: hidden;
+  padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none; /* Ubah ini menjadi none */
+  touch-action: pan-y;
+  scroll-behavior: smooth;
+  background: #f7f3eb;
+}
     }
     .chat-msgs::-webkit-scrollbar { width: 3px; }
     .chat-msgs::-webkit-scrollbar-track { background: transparent; }
