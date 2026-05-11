@@ -49,7 +49,10 @@ Akhiri jawaban dengan emoji tanaman yang relevan.`;
       messages.push({ role: 'user', parts: [{ text: message }] });
     }
 
-    const geminiKey = "AIzaSyDwBzngUA78CpU_LktQStspVNrD_JTLnTQ";
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) {
+      return res.status(500).json({ error: "Konfigurasi server belum lengkap (GEMINI_API_KEY belum diatur)." });
+    }
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
 
     const payload = {

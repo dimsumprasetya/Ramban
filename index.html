@@ -310,7 +310,6 @@ html, body {
   scroll-behavior: smooth;
   background: #f7f3eb;
 }
-    }
     .chat-msgs::-webkit-scrollbar { width: 3px; }
     .chat-msgs::-webkit-scrollbar-track { background: transparent; }
     .chat-msgs::-webkit-scrollbar-thumb { background: #2f4110; border-radius: 4px; }
@@ -1170,34 +1169,12 @@ html, body {
         rambanChatHistory.push({ role: 'assistant', text: text });
       }
 
-      // Build messages array for OpenRouter
-      var messages = [
-        {
-          role: 'system',
-          content: 'Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning Indonesia. Jawab pertanyaan tentang tanaman dalam bahasa Indonesia yang ramah, singkat (maks 3 paragraf), dan mudah dipahami. Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, ekologi, dan fakta botani. Jika bukan tentang tanaman, jawab: Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman?'
-        }
-      ];
-      // Add history
-      rambanChatHistory.slice(-6).forEach(function(h) {
-        if (h.role === 'user' || h.role === 'assistant') {
-          messages.push({ role: h.role, content: h.text });
-        }
-      });
-      messages.push({ role: 'user', content: q });
-
-      fetch('https://openrouter.ai/api/v1/chat/completions', {
+      fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Authorization': 'Bearer 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',
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Ramban Botani App'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'baidu/cobuddy:free',
-          messages: messages,
-          max_tokens: 500,
-          temperature: 0.7
+          message: q,
+          history: rambanChatHistory.slice(-6)
         })
       })
       .then(function(r) {
@@ -1209,7 +1186,7 @@ html, body {
         return r.json();
       })
       .then(function(data) {
-        var reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+        var reply = data && data.reply;
         addReply(reply || 'Maaf, tidak ada respons. Coba lagi ya! 🌿');
       })
       .catch(function(err) {
