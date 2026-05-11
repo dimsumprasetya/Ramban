@@ -1,14 +1,43 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/identify.js", "use": "@vercel/node" },
-    { "src": "*.html", "use": "@vercel/static" },
-    { "src": "*.png", "use": "@vercel/static" },
-    { "src": "*.ico", "use": "@vercel/static" },
-    { "src": "*.webmanifest", "use": "@vercel/static" }
+    {
+      "src": "api/identify.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/chat.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.ico",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.webmanifest",
+      "use": "@vercel/static"
+    }
   ],
   "routes": [
-    { "src": "/api/identify", "dest": "/api/identify.js" },
-    { "src": "/(.*)", "dest": "/$1" }
+    {
+      "src": "/api/identify",
+      "dest": "/api/identify.js"
+    },
+    {
+      "src": "/api/chat",
+      "dest": "/api/chat.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
   ]
 }
