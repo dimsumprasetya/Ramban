@@ -1,3 +1,10 @@
+// ── Module-level system prompt (created once) ──
+const SYSTEM_PROMPT = `Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning Indonesia.
+Jawab pertanyaan tentang tanaman dalam bahasa Indonesia yang ramah, singkat (maks 3 paragraf), dan mudah dipahami.
+Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, ekologi, dan fakta botani menarik.
+Jika pertanyaan bukan tentang tanaman, jawab: "Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman? 🌿"
+Akhiri jawaban dengan emoji tanaman yang relevan.`;
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -7,79 +14,77 @@ module.exports = async function handler(req, res) {
 
   try {
     const { message, history = [] } = req.body;
-    if (!message) return res.status(400).json({ error: 'Pesan kosong.' });
-
-    // ── Cari info dari Wikipedia dulu sebagai konteks ──
-    let wikiContext = '';
-    try {
-      // Ekstrak keyword dari pesan (ambil 1-3 kata kunci)
-      const keywords = message.replace(/[^a-zA-Z\s]/g, '').split(' ')
-        .filter(w => w.length > 3).slice(0, 2).join(' ');
-
-      if (keywords) {
-        const wikiRes = await fetch(
-          `https://id.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keywords.replace(/ /g, '_'))}`,
-          { headers: { 'User-Agent': 'RambanApp/1.0' } }
-        );
-        if (wikiRes.ok) {
-          const wikiData = await wikiRes.json();
-          if (wikiData.extract && wikiData.type !== 'disambiguation') {
-            wikiContext = wikiData.extract.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
-          }
-        }
-      }
-    } catch (_) { /* Wikipedia gagal, lanjut tanpa konteks */ }
-
-    // ── Build system prompt ──
-    const systemPrompt = `Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning Indonesia.
-Jawab pertanyaan tentang tanaman dalam bahasa Indonesia yang ramah, singkat (maks 3 paragraf), dan mudah dipahami masyarakat umum.
-Fokus pada: identifikasi tanaman, cara perawatan, manfaat, toksisitas & keamanan, ekologi, dan fakta botani menarik.
-Jika ada informasi dari Wikipedia berikut, gunakan sebagai referensi tambahan: "${wikiContext}"
-Jika pertanyaan bukan tentang tanaman atau alam, jawab: "Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman? 🌿"
-Akhiri jawaban dengan emoji tanaman yang relevan.`;
-
-    // ── Build messages untuk Gemini ──
-    const messages = [];
-    // Tambah history (skip system message)
-    history.filter(h => h.role !== 'system').forEach(h => {
-      messages.push({ role: h.role === 'assistant' ? 'model' : 'user', parts: [{ text: h.text }] });
-    });
-    // Pastikan pesan terakhir adalah user
-    if (!messages.length || messages[messages.length - 1].role !== 'user') {
-      messages.push({ role: 'user', parts: [{ text: message }] });
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'Pesan kosong atau tidak valid.' });
     }
 
-    const geminiKey = "AIzaSyDwBzngUA78CpU_LktQStspVNrD_JTLnTQ";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+    // Sanitize message length
+    const safeMessage = message.slice(0, 500);
 
-    const payload = {
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: messages,
-      generationConfig: { temperature: 0.6, maxOutputTokens: 400 }
-    };
+    // Build OpenRouter messages — system + last 6 history + current
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...history
+        .filter(h => h.role === 'user' || h.role === 'assistant')
+        .slice(-6)
+        .map(h => ({ role: h.role, content: String(h.text || '').slice(0, 500) })),
+      { role: 'user', content: safeMessage }
+    ];
 
-    const geminiRes = await fetch(url, {
+    const apiKey = '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';
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://ramban.vercel.app',
+        'X-Title': 'Ramban Botani App'
+      },
+      body: JSON.stringify({
+        model: 'baidu/cobuddy:free',
+        messages,
+        max_tokens: 500,
+        temperature: 0.7
+      })
     });
 
-    const geminiData = await geminiRes.json();
+    const data = await response.json();
 
-    if (!geminiRes.ok) {
-      // Gemini error → fallback Wikipedia answer
-      if (wikiContext) {
-        return res.status(200).json({
-          reply: `Berdasarkan Wikipedia: ${wikiContext} 🌿\n\n(Catatan: Layanan AI sedang tidak tersedia, ini adalah informasi dasar dari Wikipedia.)`
-        });
-      }
-      return res.status(200).json({ reply: 'Maaf, layanan AI sedang tidak tersedia. Silakan coba lagi nanti. 🌿' });
+    if (!response.ok) {
+      const errMsg = data?.error?.message || `OpenRouter error ${response.status}`;
+      console.error('OpenRouter error:', errMsg);
+      // Fallback: Wikipedia quick search
+      const wikiReply = await wikiSearch(safeMessage);
+      if (wikiReply) return res.status(200).json({ reply: wikiReply, source: 'wikipedia' });
+      return res.status(200).json({ reply: 'Maaf, layanan AI sedang sibuk. Coba lagi dalam beberapa saat. 🌿' });
     }
 
-    const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Maaf, tidak ada respons. Coba lagi ya! 🌿';
+    const reply = data?.choices?.[0]?.message?.content;
+    if (!reply) return res.status(200).json({ reply: 'Maaf, tidak ada respons. Coba lagi ya! 🌿' });
+
     return res.status(200).json({ reply });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('chat.js error:', err.message);
+    return res.status(500).json({ reply: 'Terjadi kesalahan server. Coba lagi nanti. 🌿' });
   }
+};
+
+// Wikipedia fallback helper
+async function wikiSearch(query) {
+  try {
+    const keywords = query.replace(/[^a-zA-Z\s]/g, '').split(' ')
+      .filter(w => w.length > 3).slice(0, 2).join('_');
+    if (!keywords) return null;
+    const r = await fetch(
+      `https://id.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keywords)}`,
+      { headers: { 'User-Agent': 'RambanApp/1.0' } }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (!d.extract || d.type === 'disambiguation') return null;
+    const extract = d.extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ');
+    return `🌿 ${d.title}\n\n${extract}\n\n(Sumber: Wikipedia — layanan AI utama sedang tidak tersedia)`;
+  } catch { return null; }
 }

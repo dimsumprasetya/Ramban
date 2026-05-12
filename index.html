@@ -835,32 +835,100 @@
       img.src = dataUrl;
     });
 
+    let _addingFile = false; // atomic guard against race condition
     const handleFileAdd = async (file) => {
-      if (!file || collectedImages.length >= 3) return;
-      const dataUrl = await new Promise(res => {
-        const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(file);
-      });
-      const compressed = await compressImage(dataUrl);
-      collectedImages.push(compressed);
+      if (!file || collectedImages.length >= 3 || _addingFile) return;
+      _addingFile = true;
+      try {
+        const dataUrl = await new Promise(res => {
+          const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(file);
+        });
+        if (collectedImages.length >= 3) return; // re-check after async
+        const compressed = await compressImage(dataUrl);
+        if (collectedImages.length < 3) collectedImages.push(compressed);
+      } finally {
+        _addingFile = false;
+      }
     };
 
     // --- History (localStorage) ---
     const HIST_KEY = 'ramban_history';
+    const HIST_MAX = 15;
+    const THUMB_SIZE = 80; // px — ~3-5KB per thumbnail
 
-    function saveToHistory(result, images) {
-      const history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
-      history.unshift({
-        id: Date.now(),
-        date: new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }),
-        commonNames: result.commonNames || '-',
-        scientificName: result.scientificName || '-',
-        toxic: result.toxic || false,
-        confidence: result.confidence || 0,
-        text: result.text,
-        thumb: images[0] // simpan foto pertama sebagai thumbnail
+    // Buat thumbnail kecil dari base64 untuk hemat localStorage
+    function makeThumbnail(base64, size) {
+      return new Promise(function(resolve) {
+        try {
+          var img = new Image();
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            var ctx = canvas.getContext('2d');
+            // crop center square
+            var dim = Math.min(img.width, img.height);
+            var sx = (img.width - dim) / 2;
+            var sy = (img.height - dim) / 2;
+            ctx.drawImage(img, sx, sy, dim, dim, 0, 0, size, size);
+            resolve(canvas.toDataURL('image/jpeg', 0.5));
+          };
+          img.onerror = function() { resolve(null); };
+          img.src = base64;
+        } catch(e) { resolve(null); }
       });
-      // Simpan maksimal 20 riwayat
-      localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(0, 20)));
+    }
+
+    // Cek sisa localStorage sebelum simpan
+    function getLocalStorageUsageKB() {
+      var total = 0;
+      try {
+        for (var k in localStorage) {
+          if (localStorage.hasOwnProperty(k)) total += localStorage[k].length * 2;
+        }
+      } catch(e) {}
+      return Math.round(total / 1024);
+    }
+
+    async function saveToHistory(result, images) {
+      try {
+        var history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+
+        // Buat thumbnail kecil dari foto pertama saja (~3-5KB)
+        var thumb = images && images[0] ? await makeThumbnail(images[0], THUMB_SIZE) : null;
+
+        history.unshift({
+          id: Date.now(),
+          date: new Date().toLocaleDateString('id-ID', {
+            day:'2-digit', month:'short', year:'numeric',
+            hour:'2-digit', minute:'2-digit'
+          }),
+          commonNames: result.commonNames || '-',
+          scientificName: result.scientificName || '-',
+          toxic: result.toxic || false,
+          confidence: result.confidence || 0,
+          text: result.text,
+          thumb: thumb // thumbnail kecil, bukan full base64
+        });
+
+        // Potong ke HIST_MAX item
+        var trimmed = history.slice(0, HIST_MAX);
+
+        // Safety: jika localStorage hampir penuh (>4MB), hapus item lama
+        var usageKB = getLocalStorageUsageKB();
+        if (usageKB > 3500) {
+          trimmed = trimmed.slice(0, Math.floor(HIST_MAX / 2));
+          console.warn('Ramban: localStorage hampir penuh (' + usageKB + 'KB), riwayat dipangkas.');
+        }
+
+        localStorage.setItem(HIST_KEY, JSON.stringify(trimmed));
+      } catch(e) {
+        // QuotaExceededError — hapus riwayat lama dan coba lagi
+        console.warn('Ramban: localStorage quota exceeded, clearing old history.');
+        try {
+          localStorage.removeItem(HIST_KEY);
+          localStorage.removeItem('ramban_offline_queue');
+        } catch(_) {}
+      }
     }
 
     window.openHistory = function() {
@@ -910,7 +978,14 @@
       if (!navigator.onLine || offlineQueue.length === 0) return;
       const item = offlineQueue[0];
       offlineQueue = offlineQueue.slice(1);
-      localStorage.setItem('ramban_offline_queue', JSON.stringify(offlineQueue));
+      try {
+          localStorage.setItem('ramban_offline_queue', JSON.stringify(
+            offlineQueue.map(function(q) {
+              return { queuedAt: q.queuedAt, photoCount: q.photoCount };
+              // Simpan hanya metadata, bukan full images ke localStorage
+            })
+          ));
+        } catch(e) { console.warn('Ramban: Could not persist offline queue', e); }
       collectedImages = item.images;
       refreshSlots();
       await identifyPlant();
@@ -923,8 +998,21 @@
 
       // Offline? Queue it
       if (!navigator.onLine) {
-        offlineQueue.push({ images: collectedImages, queuedAt: new Date().toISOString() });
-        localStorage.setItem('ramban_offline_queue', JSON.stringify(offlineQueue));
+        // Simpan thumbnail saja untuk offline queue display (bukan full base64)
+        // Full images tetap di collectedImages (memory) sampai online kembali
+        offlineQueue.push({
+          images: collectedImages, // tetap di memory
+          queuedAt: new Date().toISOString(),
+          photoCount: collectedImages.length
+        });
+        try {
+          localStorage.setItem('ramban_offline_queue', JSON.stringify(
+            offlineQueue.map(function(q) {
+              return { queuedAt: q.queuedAt, photoCount: q.photoCount };
+              // Simpan hanya metadata, bukan full images ke localStorage
+            })
+          ));
+        } catch(e) { console.warn('Ramban: Could not persist offline queue', e); }
         checkOnline();
         alert('Tidak ada koneksi internet. Foto disimpan dan akan diidentifikasi otomatis saat online kembali.');
         return;
@@ -1125,10 +1213,22 @@
       // Full-screen: hide FAB when chat open, show when closed
       if (fab) fab.style.display = rambanChatOpen ? 'none' : 'flex';
 
-      // Lock body scroll to prevent background scroll when chat open
-      document.body.style.overflow = rambanChatOpen ? 'hidden' : '';
-      document.body.style.position = rambanChatOpen ? 'fixed' : '';
-      document.body.style.width = rambanChatOpen ? '100%' : '';
+      // Lock body scroll without losing scroll position (iOS/Android safe)
+      if (rambanChatOpen) {
+        var scrollY = window.scrollY || 0;
+        document.body.dataset.scrollY = scrollY;
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.top = '-' + scrollY + 'px';
+        document.body.style.width = '100%';
+      } else {
+        var savedScrollY = parseInt(document.body.dataset.scrollY || '0');
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, savedScrollY);
+      }
       if (rambanChatOpen) lockPageScroll();
       else unlockPageScroll();
 

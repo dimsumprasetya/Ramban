@@ -1,3 +1,23 @@
+// ── Module-level constants (created once, reused across all invocations) ──
+const FAMILY_DB = {
+  'Lamiaceae':     { manfaat: 'Banyak digunakan sebagai herbal dapur, teh herbal, dan aromaterapi.', lainnya: 'Bahan baku industri parfum, sabun, dan produk perawatan tubuh.', cahaya: '☀️ Terang', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
+  'Fabaceae':      { manfaat: 'Kaya protein, sering dijadikan bahan pangan dan pakan ternak.', lainnya: 'Tanaman pengikat nitrogen, menyuburkan tanah secara alami.', cahaya: '☀️ Matahari Langsung', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
+  'Poaceae':       { manfaat: 'Sumber karbohidrat utama, biji-bijian banyak dikonsumsi sehari-hari.', lainnya: 'Pakan ternak, bahan bangunan (bambu), dan bioenergi.', cahaya: '☀️ Matahari Langsung', air: '💧 Sering', konsumsi: '🍃 Bisa dimakan', toxic: false },
+  'Asteraceae':    { manfaat: 'Digunakan sebagai tanaman hias dan obat tradisional.', lainnya: 'Beberapa spesies digunakan dalam industri minyak dan pewarna alami.', cahaya: '🌤️ Terang', air: '💧 Sedang', konsumsi: '⚠️ Tergantung spesies', toxic: false },
+  'Moraceae':      { manfaat: 'Buah dan daun sering dikonsumsi, kaya vitamin dan mineral.', lainnya: 'Kayu untuk furnitur; getah untuk industri karet.', cahaya: '☀️ Matahari Langsung', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
+  'Araceae':       { manfaat: 'Populer sebagai tanaman hias indoor karena menyerap polutan udara.', lainnya: 'Beberapa spesies digunakan dalam upacara adat dan dekorasi.', cahaya: '🌥️ Teduh–Terang', air: '💧 Sedang', konsumsi: '☠️ Beracun', toxic: true },
+  'Euphorbiaceae': { manfaat: 'Getah beberapa spesies digunakan sebagai obat tradisional.', lainnya: 'Sumber karet alam dan bahan bakar nabati (jatropha).', cahaya: '☀️ Terang', air: '💧 Jarang', konsumsi: '☠️ Getah beracun/iritan', toxic: true },
+  'Rutaceae':      { manfaat: 'Buah kaya vitamin C, dikonsumsi segar atau diolah menjadi minuman.', lainnya: 'Minyak esensial dari kulit buah untuk industri aromaterapi.', cahaya: '☀️ Matahari Langsung', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
+  'Zingiberaceae': { manfaat: 'Rimpang digunakan sebagai bumbu masak dan minuman kesehatan.', lainnya: 'Bahan baku industri jamu, kosmetik, dan obat-obatan herbal.', cahaya: '🌤️ Teduh–Terang', air: '💧 Sering', konsumsi: '🍃 Bisa dimakan', toxic: false },
+  'Arecaceae':     { manfaat: 'Buah, minyak, dan airnya bermanfaat untuk konsumsi dan kesehatan.', lainnya: 'Daun dan pelepah untuk kerajinan tangan dan bahan bangunan.', cahaya: '☀️ Matahari Langsung', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
+  'Solanaceae':    { manfaat: 'Buah banyak dikonsumsi sebagai sayuran dan bumbu masak.', lainnya: 'Beberapa spesies mengandung alkaloid untuk keperluan farmasi.', cahaya: '☀️ Matahari Langsung', air: '💧 Sedang', konsumsi: '⚠️ Tergantung spesies (ada yang beracun)', toxic: true },
+  'Malvaceae':     { manfaat: 'Bunga dan daun digunakan sebagai herbal, teh, dan pewarna alami.', lainnya: 'Serat batang digunakan dalam industri tekstil dan kerajinan.', cahaya: '☀️ Terang', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
+  'Begoniaceae':   { manfaat: 'Populer sebagai tanaman hias indoor karena toleran cahaya rendah.', lainnya: 'Digunakan dalam industri hortikultura sebagai tanaman hias komersial.', cahaya: '🌥️ Teduh–Terang', air: '💧 Sedang', konsumsi: '⚠️ Tidak untuk dikonsumsi', toxic: false },
+  'Asphodelaceae': { manfaat: 'Gel dari daun digunakan untuk perawatan kulit dan meredakan luka bakar.', lainnya: 'Bahan baku industri kosmetik, minuman kesehatan, dan farmasi.', cahaya: '☀️ Matahari Langsung', air: '💧 Jarang', konsumsi: '🍃 Gel bisa digunakan (tidak dimakan langsung)', toxic: false },
+  'Musaceae':      { manfaat: 'Buah kaya kalium dan energi, dikonsumsi segar maupun diolah.', lainnya: 'Daun digunakan sebagai pembungkus makanan tradisional dan kerajinan.', cahaya: '☀️ Matahari Langsung', air: '💧 Sering', konsumsi: '🍃 Bisa dimakan', toxic: false },
+};
+const DEFAULT_USES = { manfaat: 'Dapat dimanfaatkan sebagai tanaman hias atau bahan pangan lokal.', lainnya: 'Berpotensi dikembangkan dalam bidang etnobotani dan konservasi.', cahaya: '🌤️ Bervariasi', air: '💧 Sedang', konsumsi: '⚠️ Belum terverifikasi', toxic: false };
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -12,9 +32,13 @@ module.exports = async function handler(req, res) {
 
     // ── STEP 1: PlantNet ──
     const plantNetKey = "2b10bzCZ1eKEQBQFjMV5kWnTB";
+    const SAFE_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     const boundary = '----RambanBoundary' + Date.now();
     const parts = [];
     images.forEach((img, i) => {
+      // Sanitize mimeType to prevent header injection
+      const safeMime = SAFE_MIMES.includes(img.mimeType) ? img.mimeType : 'image/jpeg';
+      img = { ...img, mimeType: safeMime };
       parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="organs"\r\n\r\nauto\r\n`, 'utf8'));
       const ext = img.mimeType.includes('png') ? 'png' : 'jpg';
       parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="images"; filename="plant${i+1}.${ext}"\r\nContent-Type: ${img.mimeType}\r\n\r\n`, 'utf8'));
@@ -60,30 +84,18 @@ module.exports = async function handler(req, res) {
         return d;
       } catch { return null; }
     };
-    const wikiData = await fetchWiki('id', scientificName) || await fetchWiki('en', scientificName) || await fetchWiki('id', commonNamesID.split(',')[0].trim()) || null;
+    // Fetch Wikipedia in parallel — faster than sequential awaits
+    const [wikiID, wikiEN, wikiCommon] = await Promise.allSettled([
+      fetchWiki('id', scientificName),
+      fetchWiki('en', scientificName),
+      fetchWiki('id', commonNamesID.split(',')[0].trim()),
+    ]);
+    const wikiData = wikiID.value || wikiEN.value || wikiCommon.value || null;
     const wikiSummary = wikiData ? wikiData.extract.replace(/\n/g, ' ').split(/(?<=[.!?])\s+/).slice(0, 3).join(' ') : null;
     const wikiUrl = wikiData?.content_urls?.desktop?.page || null;
 
-    // ── STEP 3: Database famili ──
-    const familyDB = {
-      'Lamiaceae':     { manfaat: 'Banyak digunakan sebagai herbal dapur, teh herbal, dan aromaterapi.', lainnya: 'Bahan baku industri parfum, sabun, dan produk perawatan tubuh.', cahaya: '☀️ Terang', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
-      'Fabaceae':      { manfaat: 'Kaya protein, sering dijadikan bahan pangan dan pakan ternak.', lainnya: 'Tanaman pengikat nitrogen, menyuburkan tanah secara alami.', cahaya: '☀️ Matahari Langsung', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
-      'Poaceae':       { manfaat: 'Sumber karbohidrat utama, biji-bijian banyak dikonsumsi sehari-hari.', lainnya: 'Pakan ternak, bahan bangunan (bambu), dan bioenergi.', cahaya: '☀️ Matahari Langsung', air: '💧 Sering', konsumsi: '🍃 Bisa dimakan', toxic: false },
-      'Asteraceae':    { manfaat: 'Digunakan sebagai tanaman hias dan obat tradisional.', lainnya: 'Beberapa spesies digunakan dalam industri minyak dan pewarna alami.', cahaya: '🌤️ Terang', air: '💧 Sedang', konsumsi: '⚠️ Tergantung spesies', toxic: false },
-      'Moraceae':      { manfaat: 'Buah dan daun sering dikonsumsi, kaya vitamin dan mineral.', lainnya: 'Kayu untuk furnitur; getah untuk industri karet.', cahaya: '☀️ Matahari Langsung', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
-      'Araceae':       { manfaat: 'Populer sebagai tanaman hias indoor karena menyerap polutan udara.', lainnya: 'Beberapa spesies digunakan dalam upacara adat dan dekorasi.', cahaya: '🌥️ Teduh–Terang', air: '💧 Sedang', konsumsi: '☠️ Beracun', toxic: true },
-      'Euphorbiaceae': { manfaat: 'Getah beberapa spesies digunakan sebagai obat tradisional.', lainnya: 'Sumber karet alam dan bahan bakar nabati (jatropha).', cahaya: '☀️ Terang', air: '💧 Jarang', konsumsi: '☠️ Getah beracun/iritan', toxic: true },
-      'Rutaceae':      { manfaat: 'Buah kaya vitamin C, dikonsumsi segar atau diolah menjadi minuman.', lainnya: 'Minyak esensial dari kulit buah untuk industri aromaterapi.', cahaya: '☀️ Matahari Langsung', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
-      'Zingiberaceae': { manfaat: 'Rimpang digunakan sebagai bumbu masak dan minuman kesehatan.', lainnya: 'Bahan baku industri jamu, kosmetik, dan obat-obatan herbal.', cahaya: '🌤️ Teduh–Terang', air: '💧 Sering', konsumsi: '🍃 Bisa dimakan', toxic: false },
-      'Arecaceae':     { manfaat: 'Buah, minyak, dan airnya bermanfaat untuk konsumsi dan kesehatan.', lainnya: 'Daun dan pelepah untuk kerajinan tangan dan bahan bangunan.', cahaya: '☀️ Matahari Langsung', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
-      'Solanaceae':    { manfaat: 'Buah banyak dikonsumsi sebagai sayuran dan bumbu masak.', lainnya: 'Beberapa spesies mengandung alkaloid untuk keperluan farmasi.', cahaya: '☀️ Matahari Langsung', air: '💧 Sedang', konsumsi: '⚠️ Tergantung spesies (ada yang beracun)', toxic: true },
-      'Malvaceae':     { manfaat: 'Bunga dan daun digunakan sebagai herbal, teh, dan pewarna alami.', lainnya: 'Serat batang digunakan dalam industri tekstil dan kerajinan.', cahaya: '☀️ Terang', air: '💧 Sedang', konsumsi: '🍃 Bisa dimakan', toxic: false },
-      'Begoniaceae':   { manfaat: 'Populer sebagai tanaman hias indoor karena toleran cahaya rendah.', lainnya: 'Digunakan dalam industri hortikultura sebagai tanaman hias komersial.', cahaya: '🌥️ Teduh–Terang', air: '💧 Sedang', konsumsi: '⚠️ Tidak untuk dikonsumsi', toxic: false },
-      'Asphodelaceae': { manfaat: 'Gel dari daun digunakan untuk perawatan kulit dan meredakan luka bakar.', lainnya: 'Bahan baku industri kosmetik, minuman kesehatan, dan farmasi.', cahaya: '☀️ Matahari Langsung', air: '💧 Jarang', konsumsi: '🍃 Gel bisa digunakan (tidak dimakan langsung)', toxic: false },
-      'Musaceae':      { manfaat: 'Buah kaya kalium dan energi, dikonsumsi segar maupun diolah.', lainnya: 'Daun digunakan sebagai pembungkus makanan tradisional dan kerajinan.', cahaya: '☀️ Matahari Langsung', air: '💧 Sering', konsumsi: '🍃 Bisa dimakan', toxic: false },
-    };
-
-    const uses = familyDB[family] || { manfaat: 'Dapat dimanfaatkan sebagai tanaman hias atau bahan pangan lokal.', lainnya: 'Berpotensi dikembangkan dalam bidang etnobotani dan konservasi.', cahaya: '🌤️ Bervariasi', air: '💧 Sedang', konsumsi: '⚠️ Belum terverifikasi', toxic: false };
+    // ── STEP 3: Lookup famili dari module-level constant ──
+    const uses = FAMILY_DB[family] || DEFAULT_USES;
 
     // ── STEP 4: Susun output ──
     const isToxic = uses.toxic;
