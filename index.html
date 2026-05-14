@@ -397,6 +397,75 @@
     }
     .chat-qbtn:hover { background: rgba(47,65,16,.15); }
 
+
+    /* ── Donate Button & Modal ── */
+    #donateBtn {
+      display: flex; align-items: center; gap: 6px;
+      background: transparent;
+      border: 1px solid rgba(241,236,226,0.3);
+      color: rgba(241,236,226,0.7);
+      font-family: sans-serif; font-size: 10px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      padding: 7px 14px; border-radius: 20px; cursor: pointer;
+      transition: all .2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #donateBtn:hover { background: rgba(241,236,226,0.1); color: #F1ECE2; border-color: rgba(241,236,226,0.5); }
+    #donateModal {
+      display: none; position: fixed; inset: 0; z-index: 99000;
+      background: rgba(20,30,8,0.92);
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    #donateModal.show { display: flex; }
+    .donate-box {
+      background: #F1ECE2; border-top: 5px solid #2f4110;
+      border-radius: 6px; padding: 28px 24px;
+      max-width: 300px; width: 100%; text-align: center;
+      animation: fadeIn .3s ease;
+    }
+    .donate-icon { font-size: 32px; margin-bottom: 8px; }
+    .donate-title {
+      font-family: Georgia, serif; font-size: 18px; font-weight: 700;
+      color: #2f4110; margin-bottom: 4px;
+    }
+    .donate-sub {
+      font-size: 11px; color: #8a9070; letter-spacing: 1px;
+      text-transform: uppercase; margin-bottom: 20px;
+    }
+    .donate-bank {
+      background: #2f4110; border-radius: 6px;
+      padding: 16px; margin-bottom: 16px;
+    }
+    .donate-bank-name {
+      font-size: 12px; font-weight: 700; color: rgba(241,236,226,0.6);
+      text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;
+    }
+    .donate-account {
+      font-family: monospace; font-size: 24px; font-weight: 700;
+      color: #F1ECE2; letter-spacing: 3px; margin-bottom: 4px;
+    }
+    .donate-name {
+      font-size: 12px; color: rgba(241,236,226,0.8); font-weight: 600;
+    }
+    .donate-copy {
+      width: 100%; background: #2f4110; color: #F1ECE2; border: none;
+      padding: 11px; font-size: 12px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; cursor: pointer; border-radius: 4px;
+      margin-bottom: 10px; transition: background .2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .donate-copy:hover { background: #1a2509; }
+    .donate-close {
+      background: transparent; border: none; color: #8a9070;
+      font-size: 11px; cursor: pointer; font-family: sans-serif;
+      text-decoration: underline; padding: 4px;
+    }
+    .donate-copied {
+      display: none; font-size: 11px; color: #2f6b1a;
+      font-weight: 700; margin-bottom: 8px;
+    }
+    .donate-copied.show { display: block; }
+
   </style>
 </head>
 <body class="min-h-screen relative flex flex-col items-center select-none">
@@ -589,7 +658,10 @@
   </div>
 
   <footer class="relative z-20 w-full max-w-md text-center px-6 pb-8 mt-auto">
-    <div class="border-t border-[#F1ECE2]/10 pt-4 flex flex-col gap-2">
+    <div class="border-t border-[#F1ECE2]/10 pt-4 flex flex-col gap-2 items-center">
+      <button id="donateBtn" onclick="window.openDonate()">
+        ☕ Dukung Ramban
+      </button>
       <p class="text-[#F1ECE2]/40 text-[10px] tracking-widest uppercase">
         created by Pijak Bumi Learning
       </p>
@@ -1397,6 +1469,55 @@
     var teaserX  = document.getElementById('teaserClose');
     if (teaserEl) teaserEl.addEventListener('click', function(){ window.rambanToggleChat(); });
     if (teaserX)  teaserX.addEventListener('click', function(e){ e.stopPropagation(); teaserEl.style.display='none'; });
+
+    // ── DONATE ──
+    window.openDonate = function() {
+      document.getElementById('donateModal').classList.add('show');
+    };
+    window.closeDonate = function() {
+      document.getElementById('donateModal').classList.remove('show');
+      document.getElementById('copiedMsg').classList.remove('show');
+    };
+    window.copyAccount = function() {
+      var num = document.getElementById('accNumber').textContent.trim();
+      var copied = document.getElementById('copiedMsg');
+      function showCopied() {
+        copied.classList.add('show');
+        setTimeout(function(){ copied.classList.remove('show'); }, 2500);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(num).then(showCopied).catch(fallbackCopy);
+      } else { fallbackCopy(); }
+      function fallbackCopy() {
+        var el = document.createElement('textarea');
+        el.value = num; el.style.cssText = 'position:fixed;top:-999px;opacity:0';
+        document.body.appendChild(el); el.focus(); el.select();
+        try { document.execCommand('copy'); showCopied(); } catch(e) {}
+        document.body.removeChild(el);
+      }
+    };
   </script>
+  <!-- ── DONATE MODAL ── -->
+  <div id="donateModal" onclick="if(event.target===this)window.closeDonate()">
+    <div class="donate-box">
+      <div class="donate-icon">🌿</div>
+      <div class="donate-title">Dukung Ramban</div>
+      <div class="donate-sub">Pijak Bumi Learning</div>
+
+      <div class="donate-bank">
+        <div class="donate-bank-name">Bank BCA</div>
+        <div class="donate-account" id="accNumber">2291706055</div>
+        <div class="donate-name">Dimas Prasetya Fibria</div>
+      </div>
+
+      <div class="donate-copied" id="copiedMsg">✓ Nomor rekening disalin!</div>
+      <button class="donate-copy" onclick="window.copyAccount()">
+        📋 Salin Nomor Rekening
+      </button>
+      <button class="donate-close" onclick="window.closeDonate()">
+        Tutup
+      </button>
+    </div>
+  </div>
 </body>
 </html>
