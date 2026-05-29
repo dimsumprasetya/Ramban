@@ -31,23 +31,35 @@ module.exports = async function handler(req, res) {
       { role: 'user', content: safeMessage }
     ];
 
-    const apiKey = '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';
+const openrouter = new OpenRouter({
+  apiKey: "<OPENROUTER_API_KEY>"
+});
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://ramban.vercel.app',
-        'X-Title': 'Ramban Botani App'
-      },
-      body: JSON.stringify({
-        model: 'baidu/cobuddy:free',
-        messages,
-        max_tokens: 500,
-        temperature: 0.7
-      })
-    });
+// Stream the response to get reasoning tokens in usage
+const stream = await openrouter.chat.send({
+  model: "google/gemini-3.5-flash",
+  messages: [
+    {
+      role: "user",
+      content: "How many r's are in the word 'strawberry'?"
+    }
+  ],
+  stream: true
+});
+
+let response = "";
+for await (const chunk of stream) {
+  const content = chunk.choices[0]?.delta?.content;
+  if (content) {
+    response += content;
+    process.stdout.write(content);
+  }
+
+  // Usage information comes in the final chunk
+  if (chunk.usage) {
+    console.log("\nReasoning tokens:", chunk.usage.reasoningTokens);
+  }
+}
 
     const data = await response.json();
 
