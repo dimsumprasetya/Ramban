@@ -5,7 +5,7 @@ Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, ekologi, dan f
 Jika pertanyaan bukan tentang tanaman, jawab: "Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman? 🌿"
 Akhiri jawaban dengan emoji tanaman yang relevan.`;
 
-const OPENROUTER_KEY = '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';
+const OPENROUTER_KEY = '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';
 const MODEL = 'google/gemini-2.5-flash-preview';
 
 module.exports = async function handler(req, res) {
