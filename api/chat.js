@@ -1,12 +1,41 @@
-// ── Module-level constants (created once per cold start) ──
 const SYSTEM_PROMPT = `Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning Indonesia.
 Jawab pertanyaan tentang tanaman dalam bahasa Indonesia yang ramah, singkat (maks 3 paragraf), dan mudah dipahami.
 Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, ekologi, dan fakta botani menarik.
 Jika pertanyaan bukan tentang tanaman, jawab: "Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman? 🌿"
 Akhiri jawaban dengan emoji tanaman yang relevan.`;
 
-const OPENROUTER_KEY = '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';
-const MODEL = 'google/gemini-2.5-flash-preview';
+const OPENROUTER_KEY = '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';
+
+// Model fallback chain — try in order until one works
+const MODELS = [
+  'google/gemini-2.5-flash-preview',
+  'google/gemini-2.0-flash-001',
+  'google/gemini-flash-1.5',
+  'meta-llama/llama-3.1-8b-instruct:free',
+];
+
+async function callOpenRouter(messages, model) {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENROUTER_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://ramban.vercel.app',
+      'X-Title': 'Ramban Botani App'
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: 500,
+      temperature: 0.7
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`${res.status}: ${data?.error?.message || JSON.stringify(data?.error) || 'Unknown error'}`);
+  }
+  return data?.choices?.[0]?.message?.content || null;
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,12 +47,10 @@ module.exports = async function handler(req, res) {
   try {
     const { message, history = [] } = req.body;
     if (!message || typeof message !== 'string') {
-      return res.status(400).json({ error: 'Pesan kosong atau tidak valid.' });
+      return res.status(400).json({ error: 'Pesan kosong.' });
     }
 
     const safeMessage = message.slice(0, 500);
-
-    // Build messages: system + last 6 history + current question
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...history
@@ -33,48 +60,42 @@ module.exports = async function handler(req, res) {
       { role: 'user', content: safeMessage }
     ];
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENROUTER_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://ramban.vercel.app',
-        'X-Title': 'Ramban Botani App'
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages,
-        max_tokens: 500,
-        temperature: 0.7
-      })
+    // Try each model in fallback chain
+    let reply = null;
+    let lastError = '';
+
+    for (const model of MODELS) {
+      try {
+        reply = await callOpenRouter(messages, model);
+        if (reply) {
+          console.log(`✓ Used model: ${model}`);
+          break;
+        }
+      } catch (err) {
+        lastError = `${model} failed: ${err.message}`;
+        console.error(lastError);
+      }
+    }
+
+    if (reply) {
+      return res.status(200).json({ reply });
+    }
+
+    // All models failed — try Wikipedia
+    console.error('All models failed. Last error:', lastError);
+    const wikiReply = await wikiSearch(safeMessage);
+    if (wikiReply) return res.status(200).json({ reply: wikiReply });
+
+    return res.status(200).json({
+      reply: `Layanan AI sedang tidak tersedia. ${lastError ? 'Error: ' + lastError.slice(0, 100) : ''} 🌿`
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('OpenRouter error:', data?.error?.message || response.status);
-      // Fallback to Wikipedia if AI unavailable
-      const fallback = await wikiSearch(safeMessage);
-      if (fallback) return res.status(200).json({ reply: fallback });
-      return res.status(200).json({
-        reply: 'Maaf, layanan AI sedang sibuk. Coba lagi dalam beberapa saat. 🌿'
-      });
-    }
-
-    const reply = data?.choices?.[0]?.message?.content;
-    if (!reply) {
-      return res.status(200).json({ reply: 'Maaf, tidak ada respons. Coba lagi ya! 🌿' });
-    }
-
-    return res.status(200).json({ reply });
-
   } catch (err) {
-    console.error('chat.js error:', err.message);
-    return res.status(500).json({ reply: 'Terjadi kesalahan server. Coba lagi nanti. 🌿' });
+    console.error('Unhandled error:', err.message);
+    return res.status(500).json({ reply: 'Terjadi kesalahan server: ' + err.message });
   }
 };
 
-// Wikipedia fallback — no API key needed
 async function wikiSearch(query) {
   try {
     const kw = query.replace(/[^a-zA-Z\s]/g, '').split(' ')
@@ -87,6 +108,6 @@ async function wikiSearch(query) {
     if (!r.ok) return null;
     const d = await r.json();
     if (!d.extract || d.type === 'disambiguation') return null;
-    return `🌿 ${d.title}\n\n${d.extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ')}\n\n(Sumber: Wikipedia — layanan AI sedang tidak tersedia)`;
+    return `🌿 ${d.title}\n\n${d.extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ')}\n\n(Sumber: Wikipedia)`;
   } catch { return null; }
 }
