@@ -397,75 +397,6 @@
     }
     .chat-qbtn:hover { background: rgba(47,65,16,.15); }
 
-
-    /* ── Donate Button & Modal ── */
-    #donateBtn {
-      display: flex; align-items: center; gap: 6px;
-      background: transparent;
-      border: 1px solid rgba(241,236,226,0.3);
-      color: rgba(241,236,226,0.7);
-      font-family: sans-serif; font-size: 10px; font-weight: 700;
-      letter-spacing: 1px; text-transform: uppercase;
-      padding: 7px 14px; border-radius: 20px; cursor: pointer;
-      transition: all .2s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    #donateBtn:hover { background: rgba(241,236,226,0.1); color: #F1ECE2; border-color: rgba(241,236,226,0.5); }
-    #donateModal {
-      display: none; position: fixed; inset: 0; z-index: 99000;
-      background: rgba(20,30,8,0.92);
-      align-items: center; justify-content: center; padding: 24px;
-    }
-    #donateModal.show { display: flex; }
-    .donate-box {
-      background: #F1ECE2; border-top: 5px solid #2f4110;
-      border-radius: 6px; padding: 28px 24px;
-      max-width: 300px; width: 100%; text-align: center;
-      animation: fadeIn .3s ease;
-    }
-    .donate-icon { font-size: 32px; margin-bottom: 8px; }
-    .donate-title {
-      font-family: Georgia, serif; font-size: 18px; font-weight: 700;
-      color: #2f4110; margin-bottom: 4px;
-    }
-    .donate-sub {
-      font-size: 11px; color: #8a9070; letter-spacing: 1px;
-      text-transform: uppercase; margin-bottom: 20px;
-    }
-    .donate-bank {
-      background: #2f4110; border-radius: 6px;
-      padding: 16px; margin-bottom: 16px;
-    }
-    .donate-bank-name {
-      font-size: 12px; font-weight: 700; color: rgba(241,236,226,0.6);
-      text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;
-    }
-    .donate-account {
-      font-family: monospace; font-size: 24px; font-weight: 700;
-      color: #F1ECE2; letter-spacing: 3px; margin-bottom: 4px;
-    }
-    .donate-name {
-      font-size: 12px; color: rgba(241,236,226,0.8); font-weight: 600;
-    }
-    .donate-copy {
-      width: 100%; background: #2f4110; color: #F1ECE2; border: none;
-      padding: 11px; font-size: 12px; font-weight: 700; letter-spacing: 1px;
-      text-transform: uppercase; cursor: pointer; border-radius: 4px;
-      margin-bottom: 10px; transition: background .2s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .donate-copy:hover { background: #1a2509; }
-    .donate-close {
-      background: transparent; border: none; color: #8a9070;
-      font-size: 11px; cursor: pointer; font-family: sans-serif;
-      text-decoration: underline; padding: 4px;
-    }
-    .donate-copied {
-      display: none; font-size: 11px; color: #2f6b1a;
-      font-weight: 700; margin-bottom: 8px;
-    }
-    .donate-copied.show { display: block; }
-
   </style>
 </head>
 <body class="min-h-screen relative flex flex-col items-center select-none">
@@ -658,10 +589,7 @@
   </div>
 
   <footer class="relative z-20 w-full max-w-md text-center px-6 pb-8 mt-auto">
-    <div class="border-t border-[#F1ECE2]/10 pt-4 flex flex-col gap-2 items-center">
-      <button id="donateBtn" onclick="window.openDonate()">
-        ☕ Dukung Ramban
-      </button>
+    <div class="border-t border-[#F1ECE2]/10 pt-4 flex flex-col gap-2">
       <p class="text-[#F1ECE2]/40 text-[10px] tracking-widest uppercase">
         created by Pijak Bumi Learning
       </p>
@@ -907,100 +835,32 @@
       img.src = dataUrl;
     });
 
-    let _addingFile = false; // atomic guard against race condition
     const handleFileAdd = async (file) => {
-      if (!file || collectedImages.length >= 3 || _addingFile) return;
-      _addingFile = true;
-      try {
-        const dataUrl = await new Promise(res => {
-          const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(file);
-        });
-        if (collectedImages.length >= 3) return; // re-check after async
-        const compressed = await compressImage(dataUrl);
-        if (collectedImages.length < 3) collectedImages.push(compressed);
-      } finally {
-        _addingFile = false;
-      }
+      if (!file || collectedImages.length >= 3) return;
+      const dataUrl = await new Promise(res => {
+        const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(file);
+      });
+      const compressed = await compressImage(dataUrl);
+      collectedImages.push(compressed);
     };
 
     // --- History (localStorage) ---
     const HIST_KEY = 'ramban_history';
-    const HIST_MAX = 15;
-    const THUMB_SIZE = 80; // px — ~3-5KB per thumbnail
 
-    // Buat thumbnail kecil dari base64 untuk hemat localStorage
-    function makeThumbnail(base64, size) {
-      return new Promise(function(resolve) {
-        try {
-          var img = new Image();
-          img.onload = function() {
-            var canvas = document.createElement('canvas');
-            canvas.width = size; canvas.height = size;
-            var ctx = canvas.getContext('2d');
-            // crop center square
-            var dim = Math.min(img.width, img.height);
-            var sx = (img.width - dim) / 2;
-            var sy = (img.height - dim) / 2;
-            ctx.drawImage(img, sx, sy, dim, dim, 0, 0, size, size);
-            resolve(canvas.toDataURL('image/jpeg', 0.5));
-          };
-          img.onerror = function() { resolve(null); };
-          img.src = base64;
-        } catch(e) { resolve(null); }
+    function saveToHistory(result, images) {
+      const history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+      history.unshift({
+        id: Date.now(),
+        date: new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }),
+        commonNames: result.commonNames || '-',
+        scientificName: result.scientificName || '-',
+        toxic: result.toxic || false,
+        confidence: result.confidence || 0,
+        text: result.text,
+        thumb: images[0] // simpan foto pertama sebagai thumbnail
       });
-    }
-
-    // Cek sisa localStorage sebelum simpan
-    function getLocalStorageUsageKB() {
-      var total = 0;
-      try {
-        for (var k in localStorage) {
-          if (localStorage.hasOwnProperty(k)) total += localStorage[k].length * 2;
-        }
-      } catch(e) {}
-      return Math.round(total / 1024);
-    }
-
-    async function saveToHistory(result, images) {
-      try {
-        var history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
-
-        // Buat thumbnail kecil dari foto pertama saja (~3-5KB)
-        var thumb = images && images[0] ? await makeThumbnail(images[0], THUMB_SIZE) : null;
-
-        history.unshift({
-          id: Date.now(),
-          date: new Date().toLocaleDateString('id-ID', {
-            day:'2-digit', month:'short', year:'numeric',
-            hour:'2-digit', minute:'2-digit'
-          }),
-          commonNames: result.commonNames || '-',
-          scientificName: result.scientificName || '-',
-          toxic: result.toxic || false,
-          confidence: result.confidence || 0,
-          text: result.text,
-          thumb: thumb // thumbnail kecil, bukan full base64
-        });
-
-        // Potong ke HIST_MAX item
-        var trimmed = history.slice(0, HIST_MAX);
-
-        // Safety: jika localStorage hampir penuh (>4MB), hapus item lama
-        var usageKB = getLocalStorageUsageKB();
-        if (usageKB > 3500) {
-          trimmed = trimmed.slice(0, Math.floor(HIST_MAX / 2));
-          console.warn('Ramban: localStorage hampir penuh (' + usageKB + 'KB), riwayat dipangkas.');
-        }
-
-        localStorage.setItem(HIST_KEY, JSON.stringify(trimmed));
-      } catch(e) {
-        // QuotaExceededError — hapus riwayat lama dan coba lagi
-        console.warn('Ramban: localStorage quota exceeded, clearing old history.');
-        try {
-          localStorage.removeItem(HIST_KEY);
-          localStorage.removeItem('ramban_offline_queue');
-        } catch(_) {}
-      }
+      // Simpan maksimal 20 riwayat
+      localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(0, 20)));
     }
 
     window.openHistory = function() {
@@ -1050,14 +910,7 @@
       if (!navigator.onLine || offlineQueue.length === 0) return;
       const item = offlineQueue[0];
       offlineQueue = offlineQueue.slice(1);
-      try {
-          localStorage.setItem('ramban_offline_queue', JSON.stringify(
-            offlineQueue.map(function(q) {
-              return { queuedAt: q.queuedAt, photoCount: q.photoCount };
-              // Simpan hanya metadata, bukan full images ke localStorage
-            })
-          ));
-        } catch(e) { console.warn('Ramban: Could not persist offline queue', e); }
+      localStorage.setItem('ramban_offline_queue', JSON.stringify(offlineQueue));
       collectedImages = item.images;
       refreshSlots();
       await identifyPlant();
@@ -1070,21 +923,8 @@
 
       // Offline? Queue it
       if (!navigator.onLine) {
-        // Simpan thumbnail saja untuk offline queue display (bukan full base64)
-        // Full images tetap di collectedImages (memory) sampai online kembali
-        offlineQueue.push({
-          images: collectedImages, // tetap di memory
-          queuedAt: new Date().toISOString(),
-          photoCount: collectedImages.length
-        });
-        try {
-          localStorage.setItem('ramban_offline_queue', JSON.stringify(
-            offlineQueue.map(function(q) {
-              return { queuedAt: q.queuedAt, photoCount: q.photoCount };
-              // Simpan hanya metadata, bukan full images ke localStorage
-            })
-          ));
-        } catch(e) { console.warn('Ramban: Could not persist offline queue', e); }
+        offlineQueue.push({ images: collectedImages, queuedAt: new Date().toISOString() });
+        localStorage.setItem('ramban_offline_queue', JSON.stringify(offlineQueue));
         checkOnline();
         alert('Tidak ada koneksi internet. Foto disimpan dan akan diidentifikasi otomatis saat online kembali.');
         return;
@@ -1177,15 +1017,15 @@
 
   <!-- ── CHAT BOTANI FLOATING BUTTON ── -->
   <div id="chatTeaser" style="position:fixed;bottom:86px;right:16px;z-index:1000;background:#2f4110;color:#F1ECE2;font-family:sans-serif;font-size:11px;font-weight:600;padding:8px 14px 8px 10px;border-radius:20px 20px 4px 20px;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:none;align-items:center;gap:6px;max-width:200px;line-height:1.4;cursor:pointer;animation:fadeIn .4s ease;">
-    🗨️ <span>Punya pertanyaan soal tanaman? Tanya saya!</span>
+    🌿 <span>Punya pertanyaan soal tanaman? Tanya saya!</span>
     <span id="teaserClose" style="margin-left:4px;opacity:.6;font-size:14px">×</span>
   </div>
-  <button id="chatFab" onclick="window.rambanToggleChat()" title="Tanya Ahli Botani AI">🗨️</button>
+  <button id="chatFab" onclick="window.rambanToggleChat()" title="Tanya Ahli Botani AI">🌿</button>
 
   <!-- ── CHAT PANEL ── -->
   <div id="chatPanel">
     <div class="chat-hdr">
-      <div class="chat-hdr-icon">🗨️</div>
+      <div class="chat-hdr-icon">🌿</div>
       <div class="chat-hdr-info">
         <div class="chat-hdr-name">Ahli Botani AI</div>
         <div class="chat-hdr-sub">Chat Asisten Ramban</div>
@@ -1285,22 +1125,10 @@
       // Full-screen: hide FAB when chat open, show when closed
       if (fab) fab.style.display = rambanChatOpen ? 'none' : 'flex';
 
-      // Lock body scroll without losing scroll position (iOS/Android safe)
-      if (rambanChatOpen) {
-        var scrollY = window.scrollY || 0;
-        document.body.dataset.scrollY = scrollY;
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.top = '-' + scrollY + 'px';
-        document.body.style.width = '100%';
-      } else {
-        var savedScrollY = parseInt(document.body.dataset.scrollY || '0');
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        window.scrollTo(0, savedScrollY);
-      }
+      // Lock body scroll to prevent background scroll when chat open
+      document.body.style.overflow = rambanChatOpen ? 'hidden' : '';
+      document.body.style.position = rambanChatOpen ? 'fixed' : '';
+      document.body.style.width = rambanChatOpen ? '100%' : '';
       if (rambanChatOpen) lockPageScroll();
       else unlockPageScroll();
 
@@ -1344,52 +1172,22 @@
         rambanChatHistory.push({ role: 'assistant', text: text });
       }
 
-      // Build messages array for OpenRouter
-      var messages = [
-        {
-          role: 'system',
-          content: 'Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning Indonesia. Jawab pertanyaan tentang tanaman dalam bahasa Indonesia yang ramah, singkat (maks 3 paragraf), dan mudah dipahami. Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, ekologi, dan fakta botani. Jika bukan tentang tanaman, jawab: Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman?'
-        }
-      ];
-      // Add history
-      rambanChatHistory.slice(-6).forEach(function(h) {
-        if (h.role === 'user' || h.role === 'assistant') {
-          messages.push({ role: h.role, content: h.text });
-        }
-      });
-      messages.push({ role: 'user', content: q });
-
-      fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer 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',
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Ramban Botani App'
-        },
-        body: JSON.stringify({
-          model: 'baidu/cobuddy:free',
-          messages: messages,
-          max_tokens: 500,
-          temperature: 0.7
-        })
-      })
-      .then(function(r) {
-        if (!r.ok) {
-          return r.json().then(function(errData) {
-            throw new Error('API Error ' + r.status + ': ' + (errData.error && errData.error.message || JSON.stringify(errData)));
-          });
-        }
-        return r.json();
-      })
-      .then(function(data) {
-        var reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-        addReply(reply || 'Maaf, tidak ada respons. Coba lagi ya! 🌿');
-      })
-      .catch(function(err) {
-        console.error('Chat error:', err);
-        addReply('Error: ' + (err.message || 'Tidak dapat terhubung ke server. Pastikan online dan coba lagi.') + ' 🌿');
-      });
+       // Kirim ke /api/chat — API key & model tersembunyi di server
+       fetch('/api/chat', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           message: q,
+           history: rambanChatHistory.slice(-6)
+         })
+       })
+       .then(function(r) { return r.json(); })
+       .then(function(data) {
+         addReply(data.reply || 'Maaf, tidak ada respons. Coba lagi ya! 🌿');
+       })
+       .catch(function() {
+         addReply('Tidak ada koneksi. Pastikan online dan coba lagi. 🌿');
+       });
     };
 
     window.rambanSendQuick = function(q) {
@@ -1469,55 +1267,6 @@
     var teaserX  = document.getElementById('teaserClose');
     if (teaserEl) teaserEl.addEventListener('click', function(){ window.rambanToggleChat(); });
     if (teaserX)  teaserX.addEventListener('click', function(e){ e.stopPropagation(); teaserEl.style.display='none'; });
-
-    // ── DONATE ──
-    window.openDonate = function() {
-      document.getElementById('donateModal').classList.add('show');
-    };
-    window.closeDonate = function() {
-      document.getElementById('donateModal').classList.remove('show');
-      document.getElementById('copiedMsg').classList.remove('show');
-    };
-    window.copyAccount = function() {
-      var num = document.getElementById('accNumber').textContent.trim();
-      var copied = document.getElementById('copiedMsg');
-      function showCopied() {
-        copied.classList.add('show');
-        setTimeout(function(){ copied.classList.remove('show'); }, 2500);
-      }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(num).then(showCopied).catch(fallbackCopy);
-      } else { fallbackCopy(); }
-      function fallbackCopy() {
-        var el = document.createElement('textarea');
-        el.value = num; el.style.cssText = 'position:fixed;top:-999px;opacity:0';
-        document.body.appendChild(el); el.focus(); el.select();
-        try { document.execCommand('copy'); showCopied(); } catch(e) {}
-        document.body.removeChild(el);
-      }
-    };
   </script>
-  <!-- ── DONATE MODAL ── -->
-  <div id="donateModal" onclick="if(event.target===this)window.closeDonate()">
-    <div class="donate-box">
-      <div class="donate-icon">🌿</div>
-      <div class="donate-title">Dukung Ramban</div>
-      <div class="donate-sub">Pijak Bumi Learning</div>
-
-      <div class="donate-bank">
-        <div class="donate-bank-name">Bank BCA</div>
-        <div class="donate-account" id="accNumber">2291706055</div>
-        <div class="donate-name">Dimas Prasetya Fibria</div>
-      </div>
-
-      <div class="donate-copied" id="copiedMsg">✓ Nomor rekening disalin!</div>
-      <button class="donate-copy" onclick="window.copyAccount()">
-        📋 Salin Nomor Rekening
-      </button>
-      <button class="donate-close" onclick="window.closeDonate()">
-        Tutup
-      </button>
-    </div>
-  </div>
 </body>
 </html>

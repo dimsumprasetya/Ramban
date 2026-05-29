@@ -1,9 +1,12 @@
-// ── Module-level system prompt (created once) ──
+// ── Module-level constants (created once per cold start) ──
 const SYSTEM_PROMPT = `Kamu adalah Ahli Botani AI dari aplikasi Ramban oleh Pijak Bumi Learning Indonesia.
 Jawab pertanyaan tentang tanaman dalam bahasa Indonesia yang ramah, singkat (maks 3 paragraf), dan mudah dipahami.
 Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, ekologi, dan fakta botani menarik.
 Jika pertanyaan bukan tentang tanaman, jawab: "Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman? 🌿"
 Akhiri jawaban dengan emoji tanaman yang relevan.`;
+
+const OPENROUTER_KEY = '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';
+const MODEL = 'google/gemini-2.5-flash-preview';
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,10 +21,9 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Pesan kosong atau tidak valid.' });
     }
 
-    // Sanitize message length
     const safeMessage = message.slice(0, 500);
 
-    // Build OpenRouter messages — system + last 6 history + current
+    // Build messages: system + last 6 history + current question
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...history
@@ -31,49 +33,38 @@ module.exports = async function handler(req, res) {
       { role: 'user', content: safeMessage }
     ];
 
-const openrouter = new OpenRouter({
-  apiKey: "<OPENROUTER_API_KEY>"
-});
-
-// Stream the response to get reasoning tokens in usage
-const stream = await openrouter.chat.send({
-  model: "google/gemini-3.5-flash",
-  messages: [
-    {
-      role: "user",
-      content: "How many r's are in the word 'strawberry'?"
-    }
-  ],
-  stream: true
-});
-
-let response = "";
-for await (const chunk of stream) {
-  const content = chunk.choices[0]?.delta?.content;
-  if (content) {
-    response += content;
-    process.stdout.write(content);
-  }
-
-  // Usage information comes in the final chunk
-  if (chunk.usage) {
-    console.log("\nReasoning tokens:", chunk.usage.reasoningTokens);
-  }
-}
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://ramban.vercel.app',
+        'X-Title': 'Ramban Botani App'
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages,
+        max_tokens: 500,
+        temperature: 0.7
+      })
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
-      const errMsg = data?.error?.message || `OpenRouter error ${response.status}`;
-      console.error('OpenRouter error:', errMsg);
-      // Fallback: Wikipedia quick search
-      const wikiReply = await wikiSearch(safeMessage);
-      if (wikiReply) return res.status(200).json({ reply: wikiReply, source: 'wikipedia' });
-      return res.status(200).json({ reply: 'Maaf, layanan AI sedang sibuk. Coba lagi dalam beberapa saat. 🌿' });
+      console.error('OpenRouter error:', data?.error?.message || response.status);
+      // Fallback to Wikipedia if AI unavailable
+      const fallback = await wikiSearch(safeMessage);
+      if (fallback) return res.status(200).json({ reply: fallback });
+      return res.status(200).json({
+        reply: 'Maaf, layanan AI sedang sibuk. Coba lagi dalam beberapa saat. 🌿'
+      });
     }
 
     const reply = data?.choices?.[0]?.message?.content;
-    if (!reply) return res.status(200).json({ reply: 'Maaf, tidak ada respons. Coba lagi ya! 🌿' });
+    if (!reply) {
+      return res.status(200).json({ reply: 'Maaf, tidak ada respons. Coba lagi ya! 🌿' });
+    }
 
     return res.status(200).json({ reply });
 
@@ -83,20 +74,19 @@ for await (const chunk of stream) {
   }
 };
 
-// Wikipedia fallback helper
+// Wikipedia fallback — no API key needed
 async function wikiSearch(query) {
   try {
-    const keywords = query.replace(/[^a-zA-Z\s]/g, '').split(' ')
+    const kw = query.replace(/[^a-zA-Z\s]/g, '').split(' ')
       .filter(w => w.length > 3).slice(0, 2).join('_');
-    if (!keywords) return null;
+    if (!kw) return null;
     const r = await fetch(
-      `https://id.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keywords)}`,
+      `https://id.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(kw)}`,
       { headers: { 'User-Agent': 'RambanApp/1.0' } }
     );
     if (!r.ok) return null;
     const d = await r.json();
     if (!d.extract || d.type === 'disambiguation') return null;
-    const extract = d.extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ');
-    return `🌿 ${d.title}\n\n${extract}\n\n(Sumber: Wikipedia — layanan AI utama sedang tidak tersedia)`;
+    return `🌿 ${d.title}\n\n${d.extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ')}\n\n(Sumber: Wikipedia — layanan AI sedang tidak tersedia)`;
   } catch { return null; }
 }
