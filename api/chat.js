@@ -8,10 +8,12 @@ const OPENROUTER_KEY = 'sk-or-v1-97ade8996b1ae603145910bd07c2bf071d013df1d32a7b1
 
 // Model fallback chain — try in order until one works
 const MODELS = [
-  'google/gemini-2.5-flash-preview',
-  'google/gemini-2.0-flash-001',
-  'google/gemini-flash-1.5',
-  'meta-llama/llama-3.1-8b-instruct:free',
+  'nex-agi/nex-n2-pro:free',                      // free tier, primary
+  'nvidia/llama-nemotron-rerank-vl-1b-v2:free',   // free tier, fallback 1
+  'google/gemini-2.5-flash-preview',               // fallback 2
+  'google/gemini-2.0-flash-001',                   // fallback 3
+  'google/gemini-flash-1.5',                       // fallback 4
+  'meta-llama/llama-3.1-8b-instruct:free',         // fallback 5
 ];
 
 async function callOpenRouter(messages, model) {
