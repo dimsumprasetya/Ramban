@@ -1182,11 +1182,20 @@
       if (typing) { typing.style.display = 'flex'; typing.style.alignItems = 'center'; typing.style.gap = '4px'; }
       if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
+      // Teks dari AI dirapikan (tebal/miring) tapi HTML-nya diamankan dulu
+      function formatChatHTML(t) {
+        return String(t == null ? '' : t)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em>$1</em>')
+          .replace(/\n/g, '<br>');
+      }
+
       function addReply(text) {
         if (typing) typing.style.display = 'none';
         var bb = document.createElement('div');
         bb.className = 'chat-bubble bot';
-        bb.textContent = text;
+        bb.innerHTML = formatChatHTML(text);
         if (msgs) { msgs.appendChild(bb); msgs.scrollTop = msgs.scrollHeight; }
         rambanChatHistory.push({ role: 'assistant', text: text });
       }
