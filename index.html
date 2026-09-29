@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
   <title>Ramban App</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
@@ -273,21 +273,44 @@
     }
     #chatFab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.4); }
     #chatPanel {
-      position: fixed; inset: 0; z-index: 9500;
-      width: 100vw; max-width: 100vw;
+      /* Panel melayang: tidak menutup seluruh halaman, halaman tetap bisa dilihat */
+      position: fixed; right: 16px; bottom: 24px; left: auto; top: auto;
+      z-index: 9500;
+      width: min(380px, calc(100vw - 24px));
+      height: 68vh;                 /* fallback browser lama */
+      height: min(560px, 68dvh);    /* dvh: tidak ketutup bar address-bar HP */
+      max-height: calc(100dvh - 96px);
       background: #F1ECE2;
-      border-top: none;
+      border: 1px solid #D6D1C6;
+      border-radius: 16px;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, .38);
       display: none; flex-direction: column;
-      max-height: 100vh; height: 100vh;
       font-family: sans-serif;
       overflow: hidden;
+      transform-origin: bottom right;
+      animation: chatPop .18s ease-out;
     }
     #chatPanel.open { display: flex; }
+    @keyframes chatPop {
+      from { opacity: 0; transform: translateY(12px) scale(.97); }
+      to   { opacity: 1; transform: none; }
+    }
+    /* HP: panel hampir selebar layar, tetap melayang (bukan fullscreen) */
+    @media (max-width: 640px) {
+      #chatPanel {
+        right: 12px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        width: calc(100vw - 24px);
+        height: 68vh;
+        height: min(70svh, 560px);
+        max-height: calc(100dvh - 88px);
+        border-radius: 14px;
+      }
+    }
     .chat-hdr {
       background: #2f4110; color: #F1ECE2;
-      padding: 14px 16px;
-      padding-top: max(14px, env(safe-area-inset-top));
-      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px;
+      display: flex; align-items: center; gap: 10px;
       flex-shrink: 0;
     }
     .chat-hdr-icon { font-size: 22px; }
@@ -301,14 +324,14 @@
       letter-spacing: .5px;
     }
 .chat-msgs {
-  flex: 1; overflow-y: scroll; overflow-x: hidden;
-  padding: 16px; display: flex; flex-direction: column; gap: 10px;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: none; /* Ubah ini menjadi none */
-  overscroll-behavior-y: contain;
-  overscroll-behavior-x: none; /* tahan bounce horizontal */
-  touch-action: pan-y;
-  scroll-behavior: smooth;
+  flex: 1 1 auto;
+  min-height: 0;            /* wajib: tanpa ini area pesan tidak bisa di-scroll */
+  overflow-y: auto; overflow-x: hidden;
+  padding: 14px 14px 8px;
+  display: flex; flex-direction: column; gap: 10px;
+  -webkit-overflow-scrolling: touch;   /* scroll halus di iOS */
+  overscroll-behavior: contain;        /* scroll mentok tidak menyeret halaman */
+  touch-action: pan-y;                 /* hanya geser vertikal, tidak loncat */
   background: #f7f3eb;
 }
     .chat-msgs::-webkit-scrollbar { width: 3px; }
@@ -396,6 +419,21 @@
       transition: background .15s;
     }
     .chat-qbtn:hover { background: rgba(47,65,16,.15); }
+
+    /* ── Toast kecil di bawah (info back) ── */
+    #backToast {
+      position: fixed; left: 50%; bottom: 28px;
+      transform: translate(-50%, 12px);
+      z-index: 10000;
+      background: rgba(47, 65, 16, .96); color: #F1ECE2;
+      font-family: sans-serif; font-size: 12px; font-weight: 600;
+      padding: 11px 18px; border-radius: 22px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+      max-width: calc(100vw - 40px); text-align: center; line-height: 1.4;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    #backToast.show { opacity: 1; transform: translate(-50%, 0); }
 
   </style>
 </head>
@@ -1041,7 +1079,10 @@
   </div>
   <button id="chatFab" onclick="window.rambanToggleChat()" title="Tanya Ahli Botani AI">🌿</button>
 
-  <!-- ── CHAT PANEL ── -->
+  <!-- ── TOAST: info tombol back ── -->
+  <div id="backToast">Tekan tombol back sekali lagi untuk keluar</div>
+
+  <!-- ── CHAT PANEL (melayang, bukan menutup halaman) ── -->
   <div id="chatPanel">
     <div class="chat-hdr">
       <div class="chat-hdr-icon">🌿</div>
@@ -1049,7 +1090,7 @@
         <div class="chat-hdr-name">Ahli Botani AI</div>
         <div class="chat-hdr-sub">Chat Asisten Ramban</div>
       </div>
-      <button class="chat-close" id="chatClose">← Kembali</button>
+      <button class="chat-close" id="chatClose" aria-label="Tutup chat">✕</button>
     </div>
     <div class="chat-msgs" id="chatMsgs">
       <div class="chat-bubble bot">Halo! Saya asisten botani Ramban. Ada yang ingin Anda tanyakan tentang tanaman? 🌱</div>
@@ -1109,57 +1150,91 @@
     // ── CHAT: all functions use lazy DOM lookup ──
     var rambanChatOpen = false;
     var rambanChatHistory = [];
-    var rambanPageScrollTop = 0;
 
-    function lockPageScroll() {
-      rambanPageScrollTop = window.scrollY || window.pageYOffset || 0;
-      document.body.style.position = 'fixed';
-      document.body.style.top = '-' + rambanPageScrollTop + 'px';
-      document.body.style.left = '0';
-      document.body.style.right = '0';
-      document.body.style.width = '100%';
-      document.body.style.overflow = 'hidden';
-    }
+    // Panel melayang: halaman di belakang TIDAK dikunci, jadi tidak ada
+    // lagi trik position:fixed pada body (itu yang bikin scroll di HP kacau).
 
-    function unlockPageScroll() {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
-      document.body.style.right = '';
-      document.body.style.width = '';
-      document.body.style.overflow = '';
-      window.scrollTo(0, rambanPageScrollTop);
-    }
-    window.rambanToggleChat = function() {
-      rambanChatOpen = !rambanChatOpen;
+    // Jaga panel tetap di atas keyboard virtual (iOS/Android)
+    function rambanAdjustChatForKeyboard() {
       var panel = document.getElementById('chatPanel');
-      var fab   = document.getElementById('chatFab');
-      var input = document.getElementById('chatInputField');
+      if (!panel || !rambanChatOpen) return;
+      var vv = window.visualViewport;
+      var kb = 0;
+      if (vv) kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      if (kb > 60) {
+        panel.style.bottom = (kb + 10) + 'px';
+        panel.style.maxHeight = Math.max(200, vv.height - 20) + 'px';
+      } else {
+        panel.style.bottom = '';
+        panel.style.maxHeight = '';
+      }
+    }
+
+    function rambanScrollChatToEnd() {
+      var msgs = document.getElementById('chatMsgs');
+      if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function rambanSetChatOpen(open) {
+      rambanChatOpen = !!open;
+      var panel  = document.getElementById('chatPanel');
+      var fab    = document.getElementById('chatFab');
+      var input  = document.getElementById('chatInputField');
       var teaser = document.getElementById('chatTeaser');
       if (!panel) return;
 
       panel.style.display = rambanChatOpen ? 'flex' : 'none';
       panel.style.flexDirection = 'column';
+      panel.classList.toggle('open', rambanChatOpen);
 
-      // Full-screen: hide FAB when chat open, show when closed
+      // FAB diganti jadi tombol tutup di header, jadi disembunyikan saat terbuka
       if (fab) fab.style.display = rambanChatOpen ? 'none' : 'flex';
-
-      // Lock body scroll to prevent background scroll when chat open
-      document.body.style.overflow = rambanChatOpen ? 'hidden' : '';
-      document.body.style.position = rambanChatOpen ? 'fixed' : '';
-      document.body.style.width = rambanChatOpen ? '100%' : '';
-      if (rambanChatOpen) lockPageScroll();
-      else unlockPageScroll();
-
       if (teaser) teaser.style.display = 'none';
 
       if (rambanChatOpen) {
         localStorage.setItem('ramban_chat_used', '1');
-        if (input) setTimeout(function(){ input.focus(); }, 200);
-        var msgs = document.getElementById('chatMsgs');
-        if (msgs) setTimeout(function(){ msgs.scrollTop = msgs.scrollHeight; }, 80);
+        rambanAdjustChatForKeyboard();
+        // Di HP jangan auto-focus: keyboard langsung muncul & layout loncat
+        var isNarrow = window.matchMedia('(max-width: 640px)').matches;
+        if (input && !isNarrow) setTimeout(function(){ input.focus(); }, 200);
+        setTimeout(rambanScrollChatToEnd, 80);
+      } else {
+        if (input) input.blur();
+        panel.style.bottom = '';
+        panel.style.maxHeight = '';
       }
+    }
+
+    window.rambanToggleChat = function() {
+      rambanSetChatOpen(!rambanChatOpen);
     };
+
+    // Ketuk di luar panel = tutup chat (khas widget melayang)
+    document.addEventListener('click', function (e) {
+      if (!rambanChatOpen) return;
+      var panel = document.getElementById('chatPanel');
+      if (!panel || panel.contains(e.target)) return;
+      if (e.target.closest && e.target.closest('#chatFab, #chatTeaser, #backToast')) return;
+      rambanSetChatOpen(false);
+      // tap luar hanya menutup chat, tidak ikut menekan tombol di belakangnya
+      e.stopPropagation();
+      e.preventDefault();
+    }, true);
+
+    // Tutup dengan tombol Esc (desktop)
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && rambanChatOpen) rambanSetChatOpen(false);
+    });
+
+    // Ikuti perubahan tinggi keyboard/browser
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', rambanAdjustChatForKeyboard);
+      window.visualViewport.addEventListener('scroll', rambanAdjustChatForKeyboard);
+    }
+    window.addEventListener('resize', rambanAdjustChatForKeyboard);
+    window.addEventListener('orientationchange', function () {
+      setTimeout(rambanAdjustChatForKeyboard, 250);
+    });
 
     window.rambanSendChat = function() {
       var input = document.getElementById('chatInputField');
@@ -1264,25 +1339,10 @@
       });
     }
 
-    // Prevent pull-to-refresh from fighting chat scroll at top edge
-    var chatMsgsEl = document.getElementById('chatMsgs');
-    if (chatMsgsEl) {
-      var chatTouchStartY = 0;
-      chatMsgsEl.addEventListener('touchstart', function(e) {
-        if (!e.touches || !e.touches.length) return;
-        chatTouchStartY = e.touches[0].clientY;
-      }, { passive: true });
-
-      chatMsgsEl.addEventListener('touchmove', function(e) {
-        if (!rambanChatOpen || !e.touches || !e.touches.length) return;
-        var currentY = e.touches[0].clientY;
-        var pullingDown = currentY > chatTouchStartY;
-        var atTop = chatMsgsEl.scrollTop <= 0;
-        if (atTop && pullingDown) {
-          e.preventDefault();
-        }
-      }, { passive: false });
-    }
+    // Catatan: handler touchmove manual untuk "tahan pull-to-refresh" sudah dibuang.
+    // Dulu handler itu memanggil preventDefault() saat pesan masih di paling atas,
+    // efeknya scroll di HP terasa nyangkut. Sekarang cukup pakai
+    // overscroll-behavior: contain pada .chat-msgs.
 
     // Teaser: show after 3s if chat never used
     if (!localStorage.getItem('ramban_chat_used')) {
@@ -1295,6 +1355,76 @@
     var teaserX  = document.getElementById('teaserClose');
     if (teaserEl) teaserEl.addEventListener('click', function(){ window.rambanToggleChat(); });
     if (teaserX)  teaserX.addEventListener('click', function(e){ e.stopPropagation(); teaserEl.style.display='none'; });
+
+    // ── TOMBOL BACK HP ──
+    // Urutannya: (1) masih ada panel terbuka? tombol back menutup panel itu.
+    //            (2) tidak ada panel? back pertama cuma memberi peringatan,
+    //                back kedua (dalam 2 detik) baru benar-benar keluar.
+    // Jadi tidak ada lagi "sekali back langsung keluar aplikasi".
+    var rambanLastBack  = 0;
+    var rambanLeaving   = false;
+    var rambanToastTimer = null;
+
+    function rambanToast(msg) {
+      var el = document.getElementById('backToast');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(rambanToastTimer);
+      rambanToastTimer = setTimeout(function () { el.classList.remove('show'); }, 2000);
+    }
+
+    // Satu entri history dipakai sebagai penahan
+    function rambanArmBackGuard() {
+      try { history.pushState({ rambanGuard: 1 }, ''); } catch (e) {}
+    }
+
+    function rambanTopOpenLayer() {
+      var dp = document.getElementById('disclaimerPopup');
+      if (dp && dp.style.display !== 'none') return 'disclaimer';
+      if (rambanChatOpen) return 'chat';
+      var pm = document.getElementById('pickerModal');
+      if (pm && !pm.classList.contains('hidden')) return 'picker';
+      var hp = document.getElementById('historyPanel');
+      if (hp && hp.classList.contains('show')) return 'history';
+      return null;
+    }
+
+    function rambanCloseLayer(name) {
+      try {
+        if (name === 'chat' && typeof rambanSetChatOpen === 'function') rambanSetChatOpen(false);
+        else if (name === 'picker' && typeof closePicker === 'function') closePicker();
+        else if (name === 'history' && typeof window.closeHistory === 'function') window.closeHistory();
+        // 'disclaimer' sengaja tidak ditutup: persetujuan wajib dibaca dulu
+      } catch (e) {}
+    }
+
+    window.addEventListener('popstate', function () {
+      if (rambanLeaving) return;
+
+      var top = rambanTopOpenLayer();
+      if (top) {
+        rambanCloseLayer(top);
+        rambanLastBack = 0;
+        rambanArmBackGuard();   // tetap tahan di halaman
+        return;
+      }
+
+      var now = Date.now();
+      if (now - rambanLastBack < 2000) {
+        // back kedua dalam 2 detik → silakan keluar
+        rambanLeaving = true;
+        rambanLastBack = 0;
+        try { history.go(-1); } catch (e) {}
+        return;
+      }
+
+      rambanLastBack = now;
+      rambanArmBackGuard();
+      rambanToast('Tekan tombol back sekali lagi untuk keluar');
+    });
+
+    rambanArmBackGuard();
   </script>
 </body>
 </html>
