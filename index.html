@@ -505,7 +505,7 @@
     </div>
 
     <!-- Camera / Gallery Picker Modal (centered) -->
-    <div id="pickerModal" class="hidden fixed inset-0 flex items-center justify-center px-4" style="z-index:500;background:rgba(0,0,0,0.6)" style="background: rgba(0,0,0,0.6)">
+    <div id="pickerModal" class="hidden fixed inset-0 flex items-center justify-center px-4" style="z-index:500;background:rgba(0,0,0,0.6)">
       <div class="w-full max-w-sm bg-[#F1ECE2] shadow-2xl overflow-hidden" style="border-radius: 6px;">
         <p class="text-center text-[10px] font-bold uppercase tracking-widest text-[#2f4110]/60 pt-5 pb-3 px-6 border-b border-[#D6D1C6]">Pilih Sumber Gambar</p>
 
@@ -555,7 +555,7 @@
       </div>
     </div>
   <!-- Offline indicator -->
-  <div id="offlineBar" class="hidden fixed top-0 left-0 right-0 text-white text-center text-xs font-bold py-2 px-4" style="z-index:2000;background:#d97706;" style="font-family:sans-serif;">
+  <div id="offlineBar" class="hidden fixed top-0 left-0 right-0 text-white text-center text-xs font-bold py-2 px-4" style="z-index:2000;background:#d97706;font-family:sans-serif;">
     📡 Tidak ada koneksi. Foto akan diidentifikasi otomatis saat online kembali.
   </div>
 
@@ -723,9 +723,8 @@
       }
     }
 
-    delBtns.forEach((btn, i) => {
-      btn.addEventListener('click', (e) => { e.stopPropagation(); collectedImages.splice(i, 1); refreshSlots(); });
-    });
+    // Tombol hapus sudah punya handler inline (onclick="removeSlot(i)").
+    // Jangan ditambah addEventListener lagi — dulu dobel dan sekali klik menghapus 2 foto.
 
     // --- Global slot tap → langsung buka kamera ---
     window.slotTap = function(i) {
@@ -859,8 +858,17 @@
         text: result.text,
         thumb: images[0] // simpan foto pertama sebagai thumbnail
       });
-      // Simpan maksimal 20 riwayat
-      localStorage.setItem(HIST_KEY, JSON.stringify(history.slice(0, 20)));
+      // Simpan maksimal 20 riwayat.
+      // localStorage punya batas ~5MB: kalau penuh, simpan tanpa thumbnail dulu
+      // supaya riwayat tidak hilang begitu saja.
+      const write = (arr) => localStorage.setItem(HIST_KEY, JSON.stringify(arr));
+      const slim = (arr, n) => arr.slice(0, n).map(h => Object.assign({}, h, { thumb: null }));
+      try {
+        write(history.slice(0, 20));
+      } catch (e) {
+        try { write(slim(history, 20)); }
+        catch (e2) { try { write(slim(history, 5)); } catch (e3) { console.warn('Riwayat tidak bisa disimpan:', e3); } }
+      }
     }
 
     window.openHistory = function() {
@@ -873,9 +881,9 @@
           <div class="hist-item ${h.toxic ? 'toxic' : ''}" onclick="loadFromHistory(${h.id})">
             <img class="hist-thumb" src="${h.thumb}" onerror="this.style.display='none'" />
             <div class="hist-info">
-              <div class="hist-name">${h.toxic ? '⚠️ ' : ''}${h.commonNames}</div>
-              <div class="hist-latin">${h.scientificName}</div>
-              <div class="hist-date">${h.date} · ${h.confidence}% keyakinan</div>
+              <div class="hist-name">${h.toxic ? '⚠️ ' : ''}${escapeHtml(h.commonNames || '-')}</div>
+              <div class="hist-latin">${escapeHtml(h.scientificName || '-')}</div>
+              <div class="hist-date">${escapeHtml(h.date)} · ${Number(h.confidence) || 0}% keyakinan</div>
             </div>
           </div>`).join('');
       }
@@ -968,9 +976,17 @@
     };
 
     // --- Render ---
+    // Teks dari API diamankan dulu (anti-XSS), baru diberi format
+    const escapeHtml = (s) => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
     const renderFormattedText = (text, toxic, imgs) => {
       // Remove internal tag
-      const cleanText = text.replace('[PERINGATAN_BERACUN]\n', '').replace('[PERINGATAN_BERACUN]', '');
+      const cleanText = String(text || '').replace('[PERINGATAN_BERACUN]\n', '').replace('[PERINGATAN_BERACUN]', '');
 
       let html = '';
 
@@ -983,8 +999,11 @@
         html += '</div>';
       }
 
-      const boldedText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#2f4110]">$1</strong>');
-      boldedText.split('\n').forEach(line => {
+      const formatted = escapeHtml(cleanText)
+        .replace(/\*\*(.+?)\*\*/g, '<strong class="text-[#2f4110]">$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+      formatted.split('\n').forEach(line => {
         if (line.trim()) html += `<span class="block mb-3 leading-relaxed">${line}</span>`;
       });
       resultsContent.innerHTML = html;

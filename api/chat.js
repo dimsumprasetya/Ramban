@@ -4,17 +4,70 @@ Fokus pada: identifikasi tanaman, perawatan, manfaat, toksisitas, ekologi, dan f
 Jika pertanyaan bukan tentang tanaman, jawab: "Maaf, saya hanya bisa membantu seputar tanaman dan botani. Ada yang ingin ditanyakan tentang tanaman? 🌿"
 Akhiri jawaban dengan emoji tanaman yang relevan.`;
 
-const OPENROUTER_KEY = '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';
+// ── API keys dibaca dari Environment Variables Vercel (JANGAN di-hardcode di repo publik) ──
+const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || '';
 
-// Model fallback chain — try in order until one works
-const MODELS = [
-  'nex-agi/nex-n2-pro:free',                      // free tier, primary
-  'nvidia/llama-nemotron-rerank-vl-1b-v2:free',   // free tier, fallback 1
-  'google/gemini-2.5-flash-preview',               // fallback 2
-  'google/gemini-2.0-flash-001',                   // fallback 3
-  'google/gemini-flash-1.5',                       // fallback 4
-  'meta-llama/llama-3.1-8b-instruct:free',         // fallback 5
+// Provider 1 — Google Gemini (kuota gratis paling besar, dicoba lebih dulu).
+// Catatan: gemini-2.0-flash & gemini-2.5-flash-lite sudah dihapus Google (404),
+// jadi jangan dipakai lagi. Terverifikasi aktif per deploy ini.
+const GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash',
+  'gemini-flash-latest',
 ];
+
+// Provider 2 — OpenRouter (cadangan; hanya model :free yang benar-benar aktif)
+const OPENROUTER_MODELS = [
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'dots-studio/dots-3-note-preview:free',
+  'google/gemma-4-31b-it:free',
+  'google/gemma-4-26b-a4b-it:free',
+];
+
+const TIMEOUT_MS = 25000;
+
+// Kalau key Gemini invalid/expired, jangan dicoba lagi di request berikutnya
+let geminiDisabled = false;
+
+function fromGemini(data) {
+  const cand = data && data.candidates && data.candidates[0];
+  if (!cand) return null;
+  const parts = (cand.content && cand.content.parts) || [];
+  const text = parts.map(p => p.text || '').join('').trim();
+  return text || null;
+}
+
+async function callGemini(messages, model) {
+  const contents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents,
+        generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
+      }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    }
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = ((data.error && data.error.message) || '').slice(0, 120);
+    const err = new Error(`gemini ${model} ${res.status}: ${msg}`);
+    err.status = res.status;
+    err.isAuthError = res.status === 401 || res.status === 403 ||
+      (res.status === 400 && /api[\s_-]?key/i.test(msg));
+    throw err;
+  }
+  return fromGemini(data);
+}
 
 async function callOpenRouter(messages, model) {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -25,18 +78,18 @@ async function callOpenRouter(messages, model) {
       'HTTP-Referer': 'https://ramban.vercel.app',
       'X-Title': 'Ramban Botani App'
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      max_tokens: 500,
-      temperature: 0.7
-    })
+    body: JSON.stringify({ model, messages, max_tokens: 800, temperature: 0.7 }),
+    signal: AbortSignal.timeout(TIMEOUT_MS)
   });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(`${res.status}: ${data?.error?.message || JSON.stringify(data?.error) || 'Unknown error'}`);
+    const msg = (data.error && data.error.message) || JSON.stringify(data.error) || 'Unknown error';
+    const err = new Error(`${model} ${res.status}: ${String(msg).slice(0, 120)}`);
+    err.status = res.status;
+    throw err;
   }
-  return data?.choices?.[0]?.message?.content || null;
+  const text = String((data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '').trim();
+  return text || null;
 }
 
 module.exports = async function handler(req, res) {
@@ -47,7 +100,10 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { message, history = [] } = req.body;
+    const body = req.body || {};
+    const message = body.message;
+    const history = Array.isArray(body.history) ? body.history : [];
+
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Pesan kosong.' });
     }
@@ -56,45 +112,66 @@ module.exports = async function handler(req, res) {
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...history
-        .filter(h => h.role === 'user' || h.role === 'assistant')
+        .filter(h => h && (h.role === 'user' || h.role === 'assistant'))
         .slice(-6)
         .map(h => ({ role: h.role, content: String(h.text || '').slice(0, 500) })),
       { role: 'user', content: safeMessage }
     ];
 
-    // Try each model in fallback chain
     let reply = null;
-    let lastError = '';
+    let usedModel = null;
+    const errors = [];
 
-    for (const model of MODELS) {
-      try {
-        reply = await callOpenRouter(messages, model);
-        if (reply) {
-          console.log(`✓ Used model: ${model}`);
-          break;
+    // ── STEP 1: Gemini ──
+    if (GEMINI_KEY && !geminiDisabled) {
+      for (const model of GEMINI_MODELS) {
+        try {
+          reply = await callGemini(messages, model);
+          if (reply) { usedModel = 'gemini:' + model; break; }
+          errors.push(model + ': empty');
+        } catch (err) {
+          errors.push(err.message);
+          // Hanya matikan Gemini kalau memang key-nya salah/expired,
+          // bukan karena model tidak ada (404) atau server ramai (503).
+          if (err.isAuthError) {
+            geminiDisabled = true;
+            break;
+          }
         }
-      } catch (err) {
-        lastError = `${model} failed: ${err.message}`;
-        console.error(lastError);
+      }
+    }
+
+    // ── STEP 2: OpenRouter (kalau Gemini belum menjawab) ──
+    if (!reply && OPENROUTER_KEY) {
+      for (const model of OPENROUTER_MODELS) {
+        try {
+          reply = await callOpenRouter(messages, model);
+          if (reply) { usedModel = 'openrouter:' + model; break; }
+          errors.push(model + ': empty');
+        } catch (err) {
+          errors.push(err.message);
+        }
       }
     }
 
     if (reply) {
-      return res.status(200).json({ reply });
+      console.log('Ramban chat OK via ' + usedModel);
+      return res.status(200).json({ reply: reply, model: usedModel });
     }
 
-    // All models failed — try Wikipedia
-    console.error('All models failed. Last error:', lastError);
+    // ── STEP 3: Wikipedia (jalan terakhir, tanpa AI) ──
+    console.error('Semua provider AI gagal:', errors.join(' | '));
     const wikiReply = await wikiSearch(safeMessage);
-    if (wikiReply) return res.status(200).json({ reply: wikiReply });
+    if (wikiReply) return res.status(200).json({ reply: wikiReply, model: 'wikipedia' });
 
     return res.status(200).json({
-      reply: `Layanan AI sedang tidak tersedia. ${lastError ? 'Error: ' + lastError.slice(0, 100) : ''} 🌿`
+      reply: 'Maaf, layanan AI sedang sibuk. Coba tanya lagi sebentar lagi ya! 🌿',
+      model: null
     });
 
   } catch (err) {
     console.error('Unhandled error:', err.message);
-    return res.status(500).json({ reply: 'Terjadi kesalahan server: ' + err.message });
+    return res.status(200).json({ reply: 'Terjadi kesalahan server. Coba lagi sebentar ya! 🌿' });
   }
 };
 
@@ -105,11 +182,11 @@ async function wikiSearch(query) {
     if (!kw) return null;
     const r = await fetch(
       `https://id.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(kw)}`,
-      { headers: { 'User-Agent': 'RambanApp/1.0' } }
+      { headers: { 'User-Agent': 'RambanApp/1.0' }, signal: AbortSignal.timeout(8000) }
     );
     if (!r.ok) return null;
     const d = await r.json();
     if (!d.extract || d.type === 'disambiguation') return null;
     return `🌿 ${d.title}\n\n${d.extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ')}\n\n(Sumber: Wikipedia)`;
-  } catch { return null; }
+  } catch (e) { return null; }
 }

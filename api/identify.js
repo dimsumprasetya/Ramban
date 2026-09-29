@@ -11,7 +11,9 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Tidak ada gambar.' });
 
     // ── STEP 1: PlantNet ──
-    const plantNetKey = "2b10bzCZ1eKEQBQFjMV5kWnTB";
+    // API key dari Environment Variable Vercel (jangan ditulis di kode / repo publik)
+    const plantNetKey = process.env.PLANTNET_API_KEY || '';
+    if (!plantNetKey) return res.status(500).json({ error: 'PLANTNET_API_KEY belum diset di server.' });
     const boundary = '----RambanBoundary' + Date.now();
     const parts = [];
     images.forEach((img, i) => {
